@@ -113,84 +113,29 @@ src/
 - Secure environment variable handling
 - Protected API routes
 
-## API Documentation
+## Live Demo
 
-### Authentication Endpoints
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
+🌐 **[Visit ZamboVet Live Application](https://zambovet-web.vercel.app)**
 
-### Appointment Management
-- `GET /api/appointments` - List appointments
-- `POST /api/appointments` - Create appointment
-- `PATCH /api/appointments/[id]` - Update appointment
-- `PATCH /api/appointments/[id]/status` - Update appointment status
+## Quick Start
 
-### Pet Management
-- `GET /api/pets` - List pets
-- `POST /api/pets` - Add pet
-- `PUT /api/pets/[id]` - Update pet
-- `DELETE /api/pets/[id]` - Remove pet
+### For Pet Owners:
+1. **Sign up** for a new account
+2. **Add your pets** to your profile
+3. **Find nearby clinics** and veterinarians
+4. **Book appointments** with ease
+5. **Get real-time updates** on appointment status
 
-### Clinic Management
-- `GET /api/clinics` - List clinics
-- `GET /api/veterinarian/clinic` - Get veterinarian's clinic
-- `PUT /api/veterinarian/clinic` - Update clinic information
+### For Veterinarians:
+1. **Contact admin** to create your veterinarian account
+2. **Set up your clinic** information
+3. **Manage appointments** and patient records
+4. **Update appointment status** in real-time
 
-## Deployment
-
-### Vercel (Recommended)
-
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Manual Deployment
-
-1. Build the application:
-```bash
-npm run build
-```
-
-2. Start the production server:
-```bash
-npm start
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -am 'Add new feature'`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Submit a pull request
-
-## Database Schema
-
-The application uses Supabase with the following main tables:
-- `profiles` - User profiles and roles
-- `pet_owner_profiles` - Pet owner specific information
-- `veterinarians` - Veterinarian profiles and credentials
-- `clinics` - Veterinary clinic information
-- `patients` - Pet/patient records
-- `appointments` - Appointment scheduling and management
-- `notifications` - User notifications
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
-| `GMAIL_APP_PASSWORD` | Gmail app password for notifications | Optional |
-
-## Support
-
-For support, email vetzambo@gmail.com or create an issue in this repository.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### For Administrators:
+1. **Create veterinarian accounts** through the admin panel
+2. **Monitor system usage** and manage users
+3. **Oversee clinic registrations** and data
 
 ---
 
