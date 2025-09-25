@@ -4,87 +4,87 @@ import { cookies } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('Medical Records API: Starting request for patient:', params.id);
+    const resolvedParams = await params;
+    console.log('Medical Records API: Starting request for patient:', resolvedParams.id);
     
-    const cookieStore = await cookies();
-    console.log('Medical Records API: Cookie store available:', !!cookieStore);
-    console.log('Medical Records API: Cookies found:', cookieStore.getAll().map(c => c.name));
+    // Get Authorization header
+    const authHeader = request.headers.get('authorization');
+    console.log('Medical Records API: Auth header present:', !!authHeader);
     
-    const supabase = createServerClient(
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Medical Records API: No Bearer token found');
+      return NextResponse.json(
+        { error: 'Authentication required - No Bearer token' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    console.log('Medical Records API: Token present:', !!token, 'length:', token.length);
+
+    // Create a service role client for data operations
+    const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll();
+            return [];
           },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Handle error silently
-            }
+          setAll() {
+            // No-op for service role
           },
         },
       }
     );
 
-    console.log('Medical Records API: Checking authentication...');
+    // Verify the token and get user info
+    console.log('Medical Records API: Verifying token...');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
-    // Try both getUser and getSession to debug authentication issues
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    console.log('Medical Records API: Auth check results:', {
-      user: user ? 'EXISTS' : 'NULL',
-      session: session ? 'EXISTS' : 'NULL',
-      authError: authError?.message,
-      sessionError: sessionError?.message
+    console.log('Medical Records API: Token verification result:', {
+      user: user ? { id: user.id, email: user.email } : 'NULL',
+      authError: authError?.message
     });
     
     if (authError || !user) {
-      console.log('Medical Records API: Authentication failed - authError:', authError, 'user:', user);
-      
-      // Try to get session to see if there's a session but no user
-      if (session) {
-        console.log('Medical Records API: Session exists but user retrieval failed');
-      }
-      
+      console.log('Medical Records API: Token verification failed');
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Authentication required - Invalid token' },
         { status: 401 }
       );
     }
 
     console.log('Medical Records API: User authenticated:', user.id);
 
-    const patientId = params.id;
+    const patientId = resolvedParams.id;
 
-    // Get user profile to check role
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile to check role using service role client
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('user_role')
       .eq('id', user.id)
       .single();
 
     if (profileError || !profile) {
+      console.error('Medical Records API: Profile error:', profileError);
       return NextResponse.json(
         { error: 'User profile not found' },
         { status: 404 }
       );
     }
 
+    console.log('Medical Records API: User profile:', { user_role: profile.user_role });
+
     let canAccessRecord = false;
 
     // Check access permissions based on user role
     if (profile.user_role === 'pet_owner') {
       // Pet owners can only access their own pets' records
-      const { data: petOwnerProfile, error: ownerError } = await supabase
+      const { data: petOwnerProfile, error: ownerError } = await supabaseAdmin
         .from('pet_owner_profiles')
         .select('id')
         .eq('user_id', user.id)
@@ -98,7 +98,7 @@ export async function GET(
       }
 
       // Check if this patient belongs to the current user
-      const { data: patientOwnership, error: ownershipError } = await supabase
+      const { data: patientOwnership, error: ownershipError } = await supabaseAdmin
         .from('patients')
         .select('owner_id')
         .eq('id', patientId)
@@ -118,8 +118,8 @@ export async function GET(
       );
     }
 
-    // Fetch comprehensive patient medical records
-    const { data: patient, error: patientError } = await supabase
+    // Fetch comprehensive patient medical records using service role client
+    const { data: patient, error: patientError } = await supabaseAdmin
       .from('patients')
       .select(`
         *,
@@ -137,15 +137,16 @@ export async function GET(
       .single();
 
     if (patientError || !patient) {
+      console.error('Medical Records API: Patient not found:', patientError);
       return NextResponse.json(
         { error: 'Patient not found' },
         { status: 404 }
       );
     }
 
-    // Fetch appointment history with related data
+    // Fetch appointment history with related data using service role client
     console.log('Medical Records API: Fetching appointments for patient:', patientId);
-    const { data: appointments, error: appointmentsError } = await supabase
+    const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
       .select(`
         *,
@@ -170,9 +171,10 @@ export async function GET(
 
     console.log('Medical Records API: Appointments fetched:', { count: appointments?.length, error: appointmentsError });
 
-    // Fetch reviews and ratings
+    // Fetch reviews and ratings using service role client  
     console.log('Medical Records API: Fetching reviews for patient:', patientId);
-    const { data: reviews, error: reviewsError } = await supabase
+    // Try both patient_id and pet_id column names
+    const { data: reviews, error: reviewsError } = await supabaseAdmin
       .from('reviews')
       .select(`
         *,
@@ -185,28 +187,18 @@ export async function GET(
           reason_for_visit
         )
       `)
-      .eq('patient_id', patientId)
+      .or(`patient_id.eq.${patientId},pet_id.eq.${patientId}`)
       .order('created_at', { ascending: false });
 
     console.log('Medical Records API: Reviews fetched:', { count: reviews?.length, error: reviewsError });
 
-    // Fetch emergency requests
+    // Fetch emergency requests using service role client
     console.log('Medical Records API: Fetching emergency requests for patient:', patientId);
-    const { data: emergencyRequests, error: emergencyError } = await supabase
+    // Simplified query without relationships that might not exist
+    const { data: emergencyRequests, error: emergencyError } = await supabaseAdmin
       .from('emergency_requests')
-      .select(`
-        *,
-        veterinarians (
-          full_name,
-          specialization
-        ),
-        clinics (
-          name,
-          address,
-          phone
-        )
-      `)
-      .eq('patient_id', patientId)
+      .select('*')
+      .or(`patient_id.eq.${patientId},pet_id.eq.${patientId}`)
       .order('request_time', { ascending: false });
 
     console.log('Medical Records API: Emergency requests fetched:', { count: emergencyRequests?.length, error: emergencyError });

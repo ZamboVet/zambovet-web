@@ -15,7 +15,8 @@ import {
   CogIcon,
   ClockIcon,
   DocumentTextIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -24,7 +25,8 @@ import {
   BuildingOffice2Icon as BuildingIconSolid,
   UserIcon as UserIconSolid,
   ChartBarIcon as ChartBarIconSolid,
-  CogIcon as CogIconSolid
+  CogIcon as CogIconSolid,
+  StarIcon as StarIconSolid
 } from '@heroicons/react/24/solid';
 
 interface DashboardLayoutProps {
@@ -106,6 +108,51 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ];
     }
     
+    if (userProfile?.user_role === 'veterinarian') {
+      return [
+        {
+          name: 'Dashboard Overview',
+          href: '/veterinarian',
+          icon: ChartBarIcon,
+          iconSolid: ChartBarIconSolid,
+          current: pathname === '/veterinarian',
+          desc: 'View performance metrics'
+        },
+        {
+          name: 'Appointment Management',
+          href: '/veterinarian/appointments',
+          icon: CalendarDaysIcon,
+          iconSolid: CalendarDaysIcon,
+          current: pathname?.startsWith('/veterinarian/appointments') || false,
+          desc: 'Manage patient appointments'
+        },
+        {
+          name: 'Patient Records',
+          href: '/veterinarian/patients',
+          icon: DocumentTextIcon,
+          iconSolid: DocumentTextIcon,
+          current: pathname?.startsWith('/veterinarian/patients') || false,
+          desc: 'Access medical records'
+        },
+        {
+          name: 'Professional Profile',
+          href: '/veterinarian/profile',
+          icon: UserIcon,
+          iconSolid: UserIconSolid,
+          current: pathname?.startsWith('/veterinarian/profile') || false,
+          desc: 'Update your credentials'
+        },
+        {
+          name: 'Patient Reviews',
+          href: '/veterinarian/reviews',
+          icon: StarIcon,
+          iconSolid: StarIconSolid,
+          current: pathname?.startsWith('/veterinarian/reviews') || false,
+          desc: 'View patient feedback'
+        }
+      ];
+    }
+    
     // Default user navigation
     return [
       {
@@ -151,14 +198,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isAdmin = userProfile?.user_role === 'admin';
 
   return (
-    <div className="min-h-screen bg-[#faf9f7] flex">
-      {/* Admin Sidebar */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex">
+      {/* Main Sidebar */}
       <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-lg overflow-y-auto">
+        <div className="flex flex-col flex-grow bg-white border-r border-slate-200 shadow-lg overflow-y-auto">
           {/* Logo */}
-          <div className="flex items-center justify-center px-6 py-8 bg-gray-900">
+          <div className="flex items-center justify-center px-6 py-8 bg-gradient-to-r from-blue-600 to-indigo-600">
             <Link href={isAdmin ? '/admin' : '/dashboard'} className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                 {isAdmin ? (
                   <CogIcon className="w-6 h-6 text-white" />
                 ) : (
@@ -167,10 +214,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <div className="text-left">
                 <div className="text-xl font-bold text-white tracking-tight">
-                  {isAdmin ? 'Admin Portal' : 'ZamboVet'}
+                  {isAdmin ? 'Admin Portal' : (userProfile?.user_role === 'veterinarian' ? 'VetPortal' : 'ZamboVet')}
                 </div>
-                <div className="text-xs text-gray-300 font-medium">
-                  {isAdmin ? 'Dashboard Control' : 'Veterinary Care'}
+                <div className="text-xs text-blue-100 font-medium">
+                  {isAdmin ? 'Dashboard Control' : (userProfile?.user_role === 'veterinarian' ? 'Veterinary Management' : 'Veterinary Care')}
                 </div>
               </div>
             </Link>
@@ -179,9 +226,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Navigation */}
           <div className="flex-1 px-4 py-6">
             <div className="mb-6">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">MAIN NAVIGATION</h3>
+              <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">MAIN NAVIGATION</h3>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.current ? item.iconSolid : item.icon;
                 return (
@@ -190,31 +237,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     href={item.href}
                     className={`w-full group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 border ${
                       item.current
-                        ? 'bg-gray-900 text-white border-gray-800 shadow-lg'
-                        : 'hover:bg-gray-50 border-transparent hover:border-gray-200 hover:shadow-sm'
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm text-blue-700'
+                        : 'hover:bg-slate-50 border-transparent hover:border-slate-200 hover:shadow-sm'
                     }`}
                   >
                     <div className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 mr-3 ${
                       item.current
-                        ? 'bg-gray-700'
-                        : 'bg-gray-100 group-hover:bg-gray-200'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600'
                     }`}>
-                      <Icon
-                        className={`h-4 w-4 ${
-                          item.current ? 'text-white' : 'text-gray-600 group-hover:text-gray-700'
-                        }`}
-                      />
+                      <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 text-left">
                       <div className={`font-semibold ${
-                        item.current ? 'text-white' : 'text-gray-900'
+                        item.current ? 'text-blue-700' : 'text-slate-900 group-hover:text-slate-900'
                       }`}>{item.name}</div>
-                      <div className={`text-xs ${
-                        item.current ? 'text-gray-300' : 'text-gray-500'
-                      }`}>
-                        {item.desc}
-                      </div>
+                      {item.desc && (
+                        <div className={`text-xs mt-0.5 ${
+                          item.current ? 'text-blue-600' : 'text-slate-500'
+                        }`}>
+                          {item.desc}
+                        </div>
+                      )}
                     </div>
+                    {item.current && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    )}
                   </Link>
                 );
               })}
@@ -223,10 +271,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* User Profile Section */}
           <div className="px-4 py-4 mt-auto">
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex items-center space-x-3 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all duration-200">
+            <div className="border-t border-slate-200 pt-4">
+              <div className="flex items-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-sm">
                       {(userProfile?.full_name || 'U').charAt(0)}
                     </span>
@@ -234,16 +282,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">
+                  <p className="text-sm font-bold text-slate-900 truncate">
                     {userProfile?.full_name || 'Cabasag Halon'}
                   </p>
-                  <p className="text-xs text-gray-600 truncate font-medium">
+                  <p className="text-xs text-slate-600 truncate font-medium">
                     {userProfile?.user_role === 'admin' ? 'System Administrator' : userProfile?.user_role || 'User'}
                   </p>
                 </div>
                 <button
                   onClick={signOut}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all duration-200"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200"
                   title="Sign Out"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,27 +305,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
+      <div className="lg:hidden bg-white shadow-sm border-b border-slate-200 fixed top-0 left-0 right-0 z-40">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href={isAdmin ? '/admin' : '/dashboard'} className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
               {isAdmin ? (
                 <CogIcon className="w-5 h-5 text-white" />
               ) : (
                 <HeartIconSolid className="w-5 h-5 text-white" />
               )}
             </div>
-            <span className="text-xl font-bold text-gray-800">
-              {isAdmin ? 'Admin' : 'ZamboVet'}
+            <span className="text-xl font-bold text-slate-900">
+              {isAdmin ? 'Admin' : (userProfile?.user_role === 'veterinarian' ? 'VetPortal' : 'ZamboVet')}
             </span>
           </Link>
           
           <div className="flex items-center space-x-3">
-            <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+            <button className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
               <BellIcon className="w-6 h-6" />
             </button>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-semibold text-sm">
                   {(userProfile?.full_name || 'U').charAt(0)}
                 </span>
@@ -295,7 +343,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Bottom Navigation (Mobile) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50">
         <div className="grid grid-cols-5 py-2">
           {navigation.map((item) => {
             const Icon = item.current ? item.iconSolid : item.icon;
@@ -305,8 +353,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 href={item.href}
                 className={`flex flex-col items-center justify-center py-2 px-1 transition-colors ${
                   item.current
-                    ? 'text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-blue-600'
+                    : 'text-slate-500 hover:text-blue-600'
                 }`}
               >
                 <Icon className="w-6 h-6 mb-1" />
