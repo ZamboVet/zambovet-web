@@ -1,0 +1,2 @@
+# This directory is kept to prevent Next.js scanning errors
+# The app uses App Router (src/app) not Pages Router
