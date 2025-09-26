@@ -142,49 +142,54 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   }, [aspect]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] px-6 py-4">
-          <h3 className="text-xl font-bold text-white">Crop Profile Picture</h3>
-          <p className="text-blue-100 text-sm">Adjust the crop area to frame your photo perfectly</p>
+        <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+          <h3 className="text-lg sm:text-xl font-bold text-white">Crop Profile Picture</h3>
+          <p className="text-blue-100 text-xs sm:text-sm">Adjust the crop area to frame your photo perfectly</p>
         </div>
 
-        {/* Crop Area */}
-        <div className="p-6">
-          <div className="max-h-96 overflow-hidden rounded-lg border border-gray-200">
-            <ReactCrop
-              crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-              onComplete={(c) => setCompletedCrop(convertToPixelCrop(c, imgRef.current?.width || 0, imgRef.current?.height || 0))}
-              aspect={aspect}
-              minWidth={minWidth}
-              minHeight={minHeight}
-              circularCrop={circularCrop}
-            >
-              <img
-                ref={imgRef}
-                alt="Crop preview"
-                src={src}
-                style={{ maxHeight: '400px', width: '100%' }}
-                onLoad={onImageLoad}
-              />
-            </ReactCrop>
-          </div>
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6">
+            {/* Crop Area */}
+            <div className="max-h-[40vh] sm:max-h-96 overflow-hidden rounded-lg border border-gray-200">
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(convertToPixelCrop(c, imgRef.current?.width || 0, imgRef.current?.height || 0))}
+                aspect={aspect}
+                minWidth={minWidth}
+                minHeight={minHeight}
+                circularCrop={circularCrop}
+              >
+                <img
+                  ref={imgRef}
+                  alt="Crop preview"
+                  src={src}
+                  style={{ maxHeight: '400px', width: '100%' }}
+                  onLoad={onImageLoad}
+                />
+              </ReactCrop>
+            </div>
 
-          {/* Instructions */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <strong>Instructions:</strong> Drag the corners to resize the crop area, or drag the entire area to reposition it.
-              {circularCrop && ' The final image will be circular.'}
-            </p>
+            {/* Instructions */}
+            <div className="mt-3 sm:mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs sm:text-sm text-blue-800">
+                <strong>Instructions:</strong> Drag the corners to resize the crop area, or drag the entire area to reposition it.
+                {circularCrop && ' The final image will be circular.'}
+              </p>
+            </div>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-6">
+        {/* Fixed Action Buttons at Bottom */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium flex items-center justify-center space-x-2"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 font-medium flex items-center justify-center space-x-2 touch-manipulation"
             >
               <XMarkIcon className="w-4 h-4" />
               <span>Cancel</span>
@@ -192,7 +197,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
 
             <button
               onClick={handleReset}
-              className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-200 font-medium flex items-center justify-center space-x-2"
+              className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-200 font-medium flex items-center justify-center space-x-2 touch-manipulation"
             >
               <ArrowPathIcon className="w-4 h-4" />
               <span>Reset</span>
@@ -201,7 +206,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
             <button
               onClick={handleCropComplete}
               disabled={processing || !completedCrop}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0032A0] to-[#0053d6] text-white rounded-xl hover:from-[#002080] hover:to-[#0040b6] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0032A0] to-[#0053d6] text-white rounded-xl hover:from-[#002080] hover:to-[#0040b6] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 touch-manipulation min-h-[48px]"
             >
               {processing ? (
                 <>
