@@ -30,6 +30,23 @@ export default function UserSettingsPanel({ onClose, isModal = false }: UserSett
     value: typeof settings[K]
   ) => {
     updateSetting(key, value);
+    
+    // Force immediate dark mode application
+    if (key === 'darkMode' && typeof document !== 'undefined') {
+      const htmlElement = document.documentElement;
+      const body = document.body;
+      
+      if (value) {
+        htmlElement.classList.add('dark');
+        body.classList.add('dark');
+        console.log('Force applied dark mode');
+      } else {
+        htmlElement.classList.remove('dark');
+        body.classList.remove('dark');
+        console.log('Force removed dark mode');
+      }
+    }
+    
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
@@ -79,6 +96,21 @@ export default function UserSettingsPanel({ onClose, isModal = false }: UserSett
           </div>
         </div>
       )}
+
+      {/* Debug Info */}
+      <div className="mb-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+        <div className="text-xs text-yellow-800 dark:text-yellow-200">
+          Debug: Dark mode is {settings.darkMode ? 'ON' : 'OFF'} | 
+          HTML class: {typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') ? 'dark' : 'light' : 'unknown'}
+        </div>
+      </div>
+
+      {/* Visual Dark Mode Test */}
+      <div className="mb-4 p-3 bg-red-100 dark:bg-green-100 border rounded-lg">
+        <div className="text-sm font-medium text-red-800 dark:text-green-800">
+          🔴 Light Mode (RED) / 🟢 Dark Mode (GREEN) - This should be GREEN when dark mode is active
+        </div>
+      </div>
 
       {/* Settings List */}
       <div className="space-y-6">

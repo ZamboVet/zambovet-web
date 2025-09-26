@@ -59,13 +59,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const htmlElement = document.documentElement;
+      console.log('Applying dark mode:', settings.darkMode);
+      console.log('Current classes before:', htmlElement.className);
+      
       if (settings.darkMode) {
         htmlElement.classList.add('dark');
+        // Also add to body for better compatibility
+        document.body.classList.add('dark');
         console.log('Dark mode enabled - added dark class');
       } else {
         htmlElement.classList.remove('dark');
+        document.body.classList.remove('dark');
         console.log('Dark mode disabled - removed dark class');
       }
+      
+      console.log('Current classes after:', htmlElement.className);
+      console.log('Body classes:', document.body.className);
     }
   }, [settings.darkMode]);
 

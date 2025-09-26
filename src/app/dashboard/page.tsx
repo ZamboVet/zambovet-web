@@ -1416,15 +1416,15 @@ export default function PetOwnerDashboard() {
   };
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center">
         <div className={`p-3 rounded-xl ${color}`}>
           <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
         <div className="ml-3 sm:ml-4 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
-          <p className="text-lg sm:text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -1433,10 +1433,10 @@ export default function PetOwnerDashboard() {
   if (petOwnerStats.loading) {
     return (
       <ProtectedRoute requiredRole="pet_owner">
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
             <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#0032A0] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your pet dashboard...</p>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#0032A0] dark:border-blue-400 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your pet dashboard...</p>
             </div>
           </div>
       </ProtectedRoute>
@@ -1447,7 +1447,7 @@ export default function PetOwnerDashboard() {
     <ProtectedRoute requiredRole="pet_owner">
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
           {/* Header */}
-        <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] px-4 pt-16 pb-8">
+        <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] dark:from-gray-800 dark:to-gray-900 px-4 pt-16 pb-8">
             <div className="max-w-7xl mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="text-center sm:text-left">
@@ -1590,9 +1590,9 @@ export default function PetOwnerDashboard() {
 
                 {/* Quick Actions & Pet Summary */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                {/* Quick Actions */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <button 
                         type="button"
