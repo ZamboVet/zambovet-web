@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import OTPVerification from '@/components/auth/OTPVerification';
 
 export default function SignupPage() {
     const { handleSignupComplete } = useAuth();
@@ -46,6 +47,8 @@ export default function SignupPage() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [completedUserRole, setCompletedUserRole] = useState<'pet_owner' | 'veterinarian'>('pet_owner');
+    const [showOTPVerification, setShowOTPVerification] = useState(false);
+    const [pendingUserData, setPendingUserData] = useState<any>(null);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -216,86 +219,39 @@ export default function SignupPage() {
                 // Show success message with pending verification info
                 setSuccess(true);
             } else {
-                // Regular pet owner registration
-                const { data: authData, error: authError } = await supabase.auth.signUp({
+                // Pet owner registration with OTP verification
+                const userData = {
                     email: formData.email,
                     password: formData.password,
-                    options: {
-                        data: {
-                            full_name: formData.fullName,
-                            user_role: formData.userRole,
-                        }
-                    }
+                    fullName: formData.fullName,
+                    phone: formData.phone,
+                    address: formData.address,
+                    emergencyContactName: formData.emergencyContactName,
+                    emergencyContactPhone: formData.emergencyContactPhone,
+                    userRole: formData.userRole || 'pet_owner'
+                };
+
+                // Send OTP to email
+                const response = await fetch('/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: formData.email,
+                        userData: userData
+                    }),
                 });
 
-                if (authError) {
-                    throw new Error(authError.message);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to send verification code');
                 }
 
-                if (!authData.user) {
-                    throw new Error('Failed to create user account');
-                }
-
-                // Create profile record
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: authData.user.id,
-                        email: formData.email,
-                        full_name: formData.fullName,
-                        phone: formData.phone,
-                        user_role: formData.userRole,
-                        is_active: true
-                    }, {
-                        onConflict: 'id'
-                    });
-
-                if (profileError) {
-                    throw new Error(`Failed to create profile: ${profileError.message}`);
-                }
-
-                // Create pet owner profile
-                const { data: existingProfile } = await supabase
-                    .from('pet_owner_profiles')
-                    .select('id')
-                    .eq('user_id', authData.user.id)
-                    .single();
-
-                let petOwnerError;
-                if (existingProfile) {
-                    const { error } = await supabase
-                        .from('pet_owner_profiles')
-                        .update({
-                            full_name: formData.fullName,
-                            phone: formData.phone,
-                            address: formData.address,
-                            emergency_contact_name: formData.emergencyContactName || null,
-                            emergency_contact_phone: formData.emergencyContactPhone || null
-                        })
-                        .eq('user_id', authData.user.id);
-                    petOwnerError = error;
-                } else {
-                    const { error } = await supabase
-                        .from('pet_owner_profiles')
-                        .insert({
-                            user_id: authData.user.id,
-                            full_name: formData.fullName,
-                            phone: formData.phone,
-                            address: formData.address,
-                            emergency_contact_name: formData.emergencyContactName || null,
-                            emergency_contact_phone: formData.emergencyContactPhone || null
-                        });
-                    petOwnerError = error;
-                }
-
-                if (petOwnerError) {
-                    throw new Error(`Failed to create pet owner profile: ${petOwnerError.message}`);
-                }
-
-                handleSignupComplete(authData.user.id);
-                // Save user role before clearing form
-                setCompletedUserRole(formData.userRole);
-                setSuccess(true);
+                // Store user data for OTP verification
+                setPendingUserData(userData);
+                setShowOTPVerification(true);
             }
 
             // Clear form data from memory for security
@@ -322,6 +278,20 @@ export default function SignupPage() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleOTPVerificationSuccess = (userData: any) => {
+        console.log('OTP verification successful:', userData);
+        handleSignupComplete(userData.id);
+        setCompletedUserRole(userData.user_role);
+        setSuccess(true);
+        setShowOTPVerification(false);
+        setPendingUserData(null);
+    };
+
+    const handleOTPBack = () => {
+        setShowOTPVerification(false);
+        setPendingUserData(null);
     };
 
     const isStep1Valid = useMemo(() => {
@@ -385,6 +355,35 @@ export default function SignupPage() {
                                 Back to Home
                             </Link>
                         </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // OTP Verification screen
+    if (showOTPVerification && pendingUserData) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#b3c7e6] via-white to-[#0032A0] opacity-70"></div>
+                
+                <div className="max-w-md w-full relative z-10">
+                    <div className="text-center mb-8">
+                        <Link href="/" className="inline-flex items-center space-x-2 mb-8">
+                            <div className="w-12 h-12 bg-gradient-to-br from-[#0032A0] to-[#0053d6] rounded-lg flex items-center justify-center">
+                                <HeartIcon className="w-7 h-7 text-white" />
+                            </div>
+                            <span className="text-2xl font-bold text-[#0032A0]">ZamboVet</span>
+                        </Link>
+                    </div>
+                    
+                    <div className="bg-white rounded-2xl shadow-xl p-8 border border-[#b3c7e6]">
+                        <OTPVerification
+                            email={pendingUserData.email}
+                            onVerificationSuccess={handleOTPVerificationSuccess}
+                            onBack={handleOTPBack}
+                            userData={pendingUserData}
+                        />
                     </div>
                 </div>
             </div>
