@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-server';
 import { 
   generateOTP, 
   getOTPExpirationTime, 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('email', email)
@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
     const expiresAt = getOTPExpirationTime();
 
     // Clean up any existing OTP for this email
-    await supabase
+    await supabaseAdmin
       .from('otp_verification')
       .delete()
       .eq('email', email);
 
     // Store OTP in database
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseAdmin
       .from('otp_verification')
       .insert({
         email,
@@ -195,7 +195,7 @@ If you didn't request this verification code, please ignore this email.
       console.error('Email sending error:', emailError);
       
       // Clean up the OTP record if email failed
-      await supabase
+      await supabaseAdmin
         .from('otp_verification')
         .delete()
         .eq('email', email);
