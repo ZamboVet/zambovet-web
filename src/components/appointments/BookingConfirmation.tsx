@@ -43,6 +43,18 @@ export default function BookingConfirmation({ bookingData, userProfile }: Bookin
         setError('');
 
         try {
+            // Check if selected time is in the past
+            const today = new Date().toISOString().split('T')[0];
+            if (bookingData.date === today) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                const [selectedHour, selectedMinute] = bookingData.time.split(':').map(Number);
+                
+                if (selectedHour < currentHour || (selectedHour === currentHour && selectedMinute <= currentMinute)) {
+                    throw new Error('Cannot book appointment in the past. Please select a future time slot.');
+                }
+            }
             // Check appointment limit for pet owner (5 appointments per day)
             const { data: dailyAppointments, error: dailyAppointmentsError } = await supabase
                 .from('appointments')
