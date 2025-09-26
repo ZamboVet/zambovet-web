@@ -215,6 +215,36 @@ export default function DiaryEntryModal({
 
         setPhotoUploading(true);
         console.log('Starting photo upload for', selectedPhotos.length, 'photos');
+        console.log('Pet ID (patient_id):', currentSelectedPetId);
+        console.log('Pet Owner ID:', petOwnerId);
+        
+        // Debug authentication status
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('Current user:', user ? `${user.id} (${user.email})` : 'NULL');
+        console.log('Auth error:', authError);
+        
+        if (user) {
+            // Check pet ownership
+            const { data: petOwnership, error: ownerError } = await supabase
+                .from('patients')
+                .select(`
+                    id, 
+                    name, 
+                    owner_id,
+                    pet_owner_profiles!inner(
+                        id,
+                        user_id
+                    )
+                `)
+                .eq('id', currentSelectedPetId)
+                .single();
+            
+            console.log('Pet ownership check:', { 
+                petOwnership, 
+                ownerError,
+                userCanUpload: petOwnership?.pet_owner_profiles?.user_id === user.id
+            });
+        }
         
         try {
             const uploadedUrls: string[] = [];
@@ -225,7 +255,7 @@ export default function DiaryEntryModal({
                 const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const timestamp = Date.now();
                 const fileName = `${timestamp}_${i}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-                const filePath = `diary-photos/${currentSelectedPetId}/${fileName}`;
+                const filePath = `${currentSelectedPetId}/${fileName}`;
 
                 console.log(`Uploading photo ${i + 1}/${selectedPhotos.length}:`, fileName);
                 
@@ -233,7 +263,7 @@ export default function DiaryEntryModal({
                 let finalUrl = '';
                 
                 // Try buckets in priority order
-                const bucketNames = ['pet-images', 'images', 'uploads', 'diary-images'];
+                const bucketNames = ['pet-diary-photos', 'pet-images', 'images', 'uploads'];
                 
                 for (const bucketName of bucketNames) {
                     try {

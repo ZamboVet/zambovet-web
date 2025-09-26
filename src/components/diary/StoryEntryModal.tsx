@@ -205,12 +205,13 @@ export default function StoryEntryModal({ isOpen, onClose, onSave, pet, entry, s
                     continue;
                 }
 
-                const fileExt = photo.name.split('.').pop();
-                const fileName = `story-${formData.pet_id}-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-                const filePath = `story-photos/${fileName}`;
+                const fileExt = photo.name.split('.').pop()?.toLowerCase() || 'jpg';
+                const timestamp = Date.now();
+                const fileName = `${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                const filePath = `${formData.pet_id}/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
-                    .from('pet-images')
+                    .from('pet-diary-photos')
                     .upload(filePath, photo);
 
                 if (uploadError) {
@@ -219,7 +220,7 @@ export default function StoryEntryModal({ isOpen, onClose, onSave, pet, entry, s
                 }
 
                 const { data } = supabase.storage
-                    .from('pet-images')
+                    .from('pet-diary-photos')
                     .getPublicUrl(filePath);
 
                 uploadedUrls.push(data.publicUrl);

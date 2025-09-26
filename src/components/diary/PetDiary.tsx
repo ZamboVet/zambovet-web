@@ -155,9 +155,13 @@ export default function PetDiary({ pets, selectedPetId, petOwnerId, onOpenAddMod
                 ? startOfMonth(currentDate).toISOString().split('T')[0]
                 : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Last 30 days
             
+            // Add 1 day to end date to ensure we catch entries from today regardless of timezone issues
             const endDate = viewMode === 'calendar'
                 ? endOfMonth(currentDate).toISOString().split('T')[0]
-                : new Date().toISOString().split('T')[0];
+                : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Tomorrow
+
+            console.log('PetDiary: Fetching entries for pet:', selectedPet);
+            console.log('PetDiary: Date range:', { startDate, endDate, viewMode });
 
             const { data, error } = await supabase
                 .from('pet_diary_entries')
@@ -167,6 +171,11 @@ export default function PetDiary({ pets, selectedPetId, petOwnerId, onOpenAddMod
                 .lte('entry_date', endDate)
                 .order('entry_date', { ascending: false })
                 .order('created_at', { ascending: false });
+
+            console.log('PetDiary: Query result:', { data, error, count: data?.length });
+            if (data && data.length > 0) {
+                console.log('PetDiary: First entry:', data[0]);
+            }
 
             if (error) throw error;
             setEntries(data || []);
