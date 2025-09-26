@@ -1840,9 +1840,26 @@ export default function PetOwnerDashboard() {
                               </div>
                             )}
                             
-                            {/* Quick Actions Bar */}
+                            {/* Quick Actions Bar - Mobile Optimized */}
                             <div className="mt-6 pt-4 border-t border-gray-100">
-                              <div className="flex items-center justify-between text-sm">
+                              {/* Mobile: Stack buttons vertically */}
+                              <div className="block sm:hidden">
+                                <span className="text-gray-500 font-medium text-sm mb-3 block">Quick Actions</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <button className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-xs touch-manipulation">
+                                    Quick Actions
+                                  </button>
+                                  <button className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-xs touch-manipulation">
+                                    Health Record
+                                  </button>
+                                  <button className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium text-xs touch-manipulation">
+                                    Book Visit
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Desktop: Horizontal layout */}
+                              <div className="hidden sm:flex items-center justify-between text-sm">
                                 <span className="text-gray-500 font-medium">Quick Actions</span>
                                 <div className="flex space-x-2">
                                   <button className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium">
