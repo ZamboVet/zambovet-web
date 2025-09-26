@@ -71,7 +71,7 @@ export default function SignupPage() {
         // Validate file type and size
         if (file) {
             const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-            const maxSizeInMB = 5;
+            const maxSizeInMB = 3; // Reduced from 5MB to 3MB to prevent 413 errors
             
             // Enhanced file validation
             if (!allowedTypes.includes(file.type)) {
@@ -87,6 +87,14 @@ export default function SignupPage() {
             // Check file name length
             if (file.name.length > 100) {
                 setError(`File name too long for ${fieldName}. Please rename your file to be shorter.`);
+                return;
+            }
+            
+            // Check total upload size (both files combined should be under 6MB)
+            const otherFile = fieldName === 'businessPermit' ? formData.governmentId : formData.businessPermit;
+            const totalSize = file.size + (otherFile?.size || 0);
+            if (totalSize > 6 * 1024 * 1024) {
+                setError('Total file size of both documents cannot exceed 6MB. Please compress your files.');
                 return;
             }
             
@@ -191,10 +199,7 @@ export default function SignupPage() {
                 registrationData.append('fullName', formData.fullName);
                 registrationData.append('phone', formData.phone);
                 registrationData.append('address', formData.address);
-                registrationData.append('specialization', formData.specialization);
                 registrationData.append('licenseNumber', formData.licenseNumber);
-                registrationData.append('yearsExperience', formData.yearsExperience);
-                registrationData.append('consultationFee', formData.consultationFee);
                 
                 if (formData.businessPermit) {
                     registrationData.append('businessPermit', formData.businessPermit);
@@ -208,7 +213,18 @@ export default function SignupPage() {
                     body: registrationData,
                 });
 
-                const result = await response.json();
+                // Handle 413 Request Entity Too Large specifically
+                if (response.status === 413) {
+                    throw new Error('File uploads are too large. Please compress your documents to under 3MB each and try again.');
+                }
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    // Handle cases where the response isn't valid JSON (like 413 errors)
+                    throw new Error('Upload failed. Please ensure your files are under 3MB each and try again.');
+                }
 
                 if (!response.ok) {
                     throw new Error(result.error || 'Failed to register veterinarian');
@@ -892,7 +908,7 @@ export default function SignupPage() {
                                                                 />
                                                             </label>
                                                         </div>
-                                                        <p className="text-xs text-[#b3c7e6]">PNG, JPG, PDF up to 5MB</p>
+                                                        <p className="text-xs text-[#b3c7e6]">PNG, JPG, PDF up to 3MB</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -951,7 +967,7 @@ export default function SignupPage() {
                                                                 />
                                                             </label>
                                                         </div>
-                                                        <p className="text-xs text-[#b3c7e6]">PNG, JPG, PDF up to 5MB</p>
+                                                        <p className="text-xs text-[#b3c7e6]">PNG, JPG, PDF up to 3MB</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -978,7 +994,7 @@ export default function SignupPage() {
                                                 </div>
                                                 <div className="flex items-center">
                                                     <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                                                    Maximum file size: 5MB per document
+                                                    Maximum file size: 3MB per document
                                                 </div>
                                                 <div className="flex items-center">
                                                     <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>

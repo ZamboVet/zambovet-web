@@ -25,7 +25,8 @@ import {
   BuildingOfficeIcon,
   ArrowRightOnRectangleIcon,
   ChartPieIcon,
-  StarIcon
+  StarIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 // Simple sanitization functions for client-side use
@@ -2329,20 +2330,20 @@ export default function PetOwnerDashboard() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                        <ChartPieIcon className="w-6 h-6 text-[#0053d6] mr-2" />
+                      <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                        <ChartBarIcon className="w-6 h-6 text-gray-600 mr-2" />
                         Pet Care Analytics
                       </h2>
                       <p className="text-gray-600 text-sm mt-1">
-                        Comprehensive insights into your pet care patterns and spending
+                        Essential insights into your pet care patterns
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => fetchAnalyticsData()}
-                        className="bg-[#0032A0] text-white px-4 py-2 rounded-lg hover:bg-[#0053d6] flex items-center space-x-2 transition-colors"
+                        className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 flex items-center space-x-2 transition-colors text-sm"
                       >
-                        <ChartPieIcon className="w-4 h-4" />
+                        <ArrowPathIcon className="w-4 h-4" />
                         <span>Refresh Data</span>
                       </button>
                     </div>
@@ -2351,227 +2352,267 @@ export default function PetOwnerDashboard() {
 
                 {analyticsData.loading ? (
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0032A0] mx-auto"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading analytics data...</p>
                   </div>
                 ) : (
-                  <>
-                    {/* Appointment Trends Chart */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <CalendarDaysIcon className="w-5 h-5 text-[#0032A0] mr-2" />
-                        Appointment Trends (Last 6 Months)
-                      </h3>
-                      <div className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={analyticsData.appointmentTrends}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="month" stroke="#666" />
-                            <YAxis stroke="#666" />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'white', 
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '8px'
-                              }}
-                            />
-                            <Legend />
-                            <Bar dataKey="total" fill={chartColors.primary} name="Total Appointments" />
-                            <Line type="monotone" dataKey="completed" stroke={chartColors.success} strokeWidth={3} name="Completed" />
-                            <Line type="monotone" dataKey="pending" stroke={chartColors.warning} strokeWidth={3} name="Pending" />
-                          </ComposedChart>
-                        </ResponsiveContainer>
+                  <div className="space-y-6">
+                    {/* Key Metrics Summary */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Overview</h3>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div className="group text-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="text-2xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
+                            {analyticsData.appointmentTrends.reduce((sum, item) => sum + item.total, 0)}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 group-hover:text-gray-500 transition-colors">Total Appointments</div>
+                          <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-gray-400 rounded-full group-hover:bg-gray-500 transition-all duration-500" style={{width: '100%'}}></div>
+                          </div>
+                        </div>
+                        <div className="group text-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                            {analyticsData.appointmentTrends.reduce((sum, item) => sum + item.completed, 0)}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 group-hover:text-green-500 transition-colors">Completed</div>
+                          <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-400 rounded-full group-hover:bg-green-500 transition-all duration-500" 
+                                 style={{width: `${(analyticsData.appointmentTrends.reduce((sum, item) => sum + item.completed, 0) / Math.max(analyticsData.appointmentTrends.reduce((sum, item) => sum + item.total, 0), 1)) * 100}%`}}></div>
+                          </div>
+                        </div>
+                        <div className="group text-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            ₱{analyticsData.monthlySpending.reduce((sum, item) => sum + item.spending, 0).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 group-hover:text-blue-500 transition-colors">Total Spent</div>
+                          <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-400 rounded-full group-hover:bg-blue-500 transition-all duration-500" style={{width: '85%'}}></div>
+                          </div>
+                        </div>
+                        <div className="group text-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                            ₱{Math.round(analyticsData.monthlySpending.reduce((sum, item) => sum + item.spending, 0) / 6).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 group-hover:text-purple-500 transition-colors">Avg Monthly</div>
+                          <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-purple-400 rounded-full group-hover:bg-purple-500 transition-all duration-500" style={{width: '60%'}}></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Monthly Spending Chart */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <DocumentTextIcon className="w-5 h-5 text-[#0032A0] mr-2" />
-                        Monthly Spending Analysis
-                      </h3>
-                      <div className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={analyticsData.monthlySpending}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="month" stroke="#666" />
-                            <YAxis stroke="#666" />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'white', 
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '8px'
-                              }}
-                              formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Spending']}
-                            />
-                            <Area 
-                              type="monotone" 
-                              dataKey="spending" 
-                              stroke={chartColors.primary} 
-                              fill={chartColors.accent} 
-                              fillOpacity={0.6}
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
+                    {/* Monthly Breakdown */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Monthly Activity (Last 6 Months)</h3>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                          <span className="text-xs text-gray-500">Hover for details</span>
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Pet Health Metrics */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                          <HeartIcon className="w-5 h-5 text-[#0032A0] mr-2" />
-                          Pet Health Metrics
-                        </h3>
-                        <div className="space-y-4">
-                          {analyticsData.petHealthMetrics.map((pet, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-semibold text-gray-900">{pet.name}</h4>
-                                <span className="text-sm text-gray-500">{pet.species}</span>
+                      <div className="space-y-2">
+                        {analyticsData.appointmentTrends.map((month, index) => {
+                          const spending = analyticsData.monthlySpending.find(s => s.month === month.month)?.spending || 0;
+                          const completionRate = month.total > 0 ? (month.completed / month.total) * 100 : 0;
+                          return (
+                            <div key={index} className="group relative">
+                              <div className="flex items-center justify-between py-4 px-4 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all duration-200 cursor-pointer">
+                                <div className="flex items-center space-x-3">
+                                  <div className="font-medium text-gray-900 group-hover:text-gray-700 transition-colors">{month.month}</div>
+                                  <div className="flex-1 max-w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-500" 
+                                         style={{width: `${completionRate}%`}}></div>
+                                  </div>
+                                  <span className="text-xs text-gray-500 group-hover:text-gray-600">{completionRate.toFixed(0)}%</span>
+                                </div>
+                                <div className="flex items-center space-x-6 text-sm">
+                                  <div className="text-center group-hover:transform group-hover:scale-105 transition-transform">
+                                    <div className="font-medium text-gray-900">{month.total}</div>
+                                    <div className="text-gray-600 text-xs">Total</div>
+                                  </div>
+                                  <div className="text-center group-hover:transform group-hover:scale-105 transition-transform">
+                                    <div className="font-medium text-green-600">{month.completed}</div>
+                                    <div className="text-gray-600 text-xs">Done</div>
+                                  </div>
+                                  {month.pending > 0 && (
+                                    <div className="text-center group-hover:transform group-hover:scale-105 transition-transform">
+                                      <div className="font-medium text-amber-600">{month.pending}</div>
+                                      <div className="text-gray-600 text-xs">Pending</div>
+                                    </div>
+                                  )}
+                                  {month.cancelled > 0 && (
+                                    <div className="text-center group-hover:transform group-hover:scale-105 transition-transform">
+                                      <div className="font-medium text-red-500">{month.cancelled}</div>
+                                      <div className="text-gray-600 text-xs">Cancelled</div>
+                                    </div>
+                                  )}
+                                  <div className="text-center group-hover:transform group-hover:scale-105 transition-transform">
+                                    <div className="font-medium text-gray-900">₱{spending.toLocaleString()}</div>
+                                    <div className="text-gray-600 text-xs">Spent</div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                  <span className="text-gray-600">Total Visits:</span>
-                                  <span className="font-medium text-gray-900 ml-1">{pet.totalVisits}</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Completed:</span>
-                                  <span className="font-medium text-gray-900 ml-1">{pet.completedVisits}</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Total Spent:</span>
-                                  <span className="font-medium text-gray-900 ml-1">₱{pet.totalSpent.toLocaleString()}</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Avg/Visit:</span>
-                                  <span className="font-medium text-gray-900 ml-1">₱{pet.avgSpent.toFixed(0)}</span>
+                              {/* Tooltip-like expansion */}
+                              <div className="absolute left-0 right-0 top-full mt-1 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transform translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none z-10">
+                                <div className="flex justify-between items-center">
+                                  <span>Success rate: {completionRate.toFixed(1)}%</span>
+                                  {spending > 0 && <span>Avg per visit: ₱{Math.round(spending / Math.max(month.completed, 1)).toLocaleString()}</span>}
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Service Breakdown */}
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                          <ChartPieIcon className="w-5 h-5 text-[#0032A0] mr-2" />
-                          Service Breakdown
-                        </h3>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={analyticsData.serviceBreakdown}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ service, percentage }) => `${service} (${percentage.toFixed(1)}%)`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="count"
-                              >
-                                {analyticsData.serviceBreakdown.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={[
-                                    chartColors.primary,
-                                    chartColors.secondary,
-                                    chartColors.accent,
-                                    chartColors.gold,
-                                    chartColors.success
-                                  ][index % 5]} />
-                                ))}
-                              </Pie>
-                              <Tooltip 
-                                contentStyle={{ 
-                                  backgroundColor: 'white', 
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: '8px'
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
+                          );
+                        })}
                       </div>
                     </div>
 
-
-
-                    {/* Spending Analysis Table */}
-                    {analyticsData.spendingAnalysis.length > 0 && (
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                          <DocumentTextIcon className="w-5 h-5 text-[#0032A0] mr-2" />
-                          Recent Spending Details
-                        </h3>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pet</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {analyticsData.spendingAnalysis.slice(0, 10).map((item, index) => (
-                                <tr key={index} className="hover:bg-gray-50">
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.date}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.service}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.pet}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₱{item.amount.toLocaleString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                    {/* Pet Care Summary */}
+                    {analyticsData.petHealthMetrics.length > 0 && (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Pet Care Summary</h3>
+                          <div className="flex items-center space-x-1">
+                            {analyticsData.petHealthMetrics.map((_, i) => (
+                              <div key={i} className={`w-1.5 h-1.5 rounded-full ${
+                                i === 0 ? 'bg-blue-400' : i === 1 ? 'bg-green-400' : i === 2 ? 'bg-purple-400' : 'bg-gray-400'
+                              }`}></div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {analyticsData.petHealthMetrics.map((pet, index) => {
+                            const avgSpending = pet.completedVisits > 0 ? pet.totalSpent / pet.completedVisits : 0;
+                            const colors = ['blue', 'green', 'purple', 'indigo'];
+                            const color = colors[index % colors.length];
+                            return (
+                              <div key={index} className={`group border border-gray-200 hover:border-${color}-300 rounded-lg p-4 hover:shadow-sm transition-all duration-200 cursor-pointer relative overflow-hidden`}>
+                                <div className={`absolute top-0 right-0 w-16 h-16 bg-${color}-50 rounded-full -mr-8 -mt-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                                <div className="relative">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <h4 className={`font-medium text-gray-900 group-hover:text-${color}-600 transition-colors`}>{pet.name}</h4>
+                                      <p className="text-sm text-gray-600">{pet.species}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className={`text-lg font-semibold text-gray-900 group-hover:text-${color}-600 transition-colors`}>{pet.completedVisits}</div>
+                                      <div className="text-xs text-gray-600">visits</div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-600">Total spent:</span>
+                                      <span className="font-medium text-gray-900">₱{pet.totalSpent.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-600">Avg per visit:</span>
+                                      <span className="font-medium text-gray-700">₱{Math.round(avgSpending).toLocaleString()}</span>
+                                    </div>
+                                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className={`h-full bg-${color}-400 rounded-full transition-all duration-500 group-hover:bg-${color}-500`} 
+                                           style={{width: `${Math.min((pet.completedVisits / 10) * 100, 100)}%`}}></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
 
-                    {/* Analytics Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm opacity-90">Total Appointments</p>
-                            <p className="text-2xl font-bold">{analyticsData.appointmentTrends.reduce((sum, item) => sum + item.total, 0)}</p>
-                          </div>
-                          <CalendarDaysIcon className="w-8 h-8 opacity-80" />
+                    {/* Services Used */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Services Used</h3>
+                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {analyticsData.serviceBreakdown.length} services
                         </div>
                       </div>
-                      
-                      <div className="bg-gradient-to-r from-[#FFD700] to-[#B8860B] rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm opacity-90">Total Spent</p>
-                            <p className="text-2xl font-bold">₱{analyticsData.monthlySpending.reduce((sum, item) => sum + item.spending, 0).toLocaleString()}</p>
-                          </div>
-                          <DocumentTextIcon className="w-8 h-8 opacity-80" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm opacity-90">Completed Visits</p>
-                            <p className="text-2xl font-bold">{analyticsData.appointmentTrends.reduce((sum, item) => sum + item.completed, 0)}</p>
-                          </div>
-                          <CheckCircleIcon className="w-8 h-8 opacity-80" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm opacity-90">Total Services</p>
-                            <p className="text-2xl font-bold">{analyticsData.serviceBreakdown.reduce((sum, item) => sum + item.count, 0)}</p>
-                          </div>
-                          <DocumentTextIcon className="w-8 h-8 opacity-80" />
-                        </div>
+                      <div className="space-y-2">
+                        {analyticsData.serviceBreakdown.map((service, index) => {
+                          const maxCount = Math.max(...analyticsData.serviceBreakdown.map(s => s.count));
+                          const width = (service.count / maxCount) * 100;
+                          const colors = ['blue', 'green', 'purple', 'indigo', 'pink'];
+                          const color = colors[index % colors.length];
+                          return (
+                            <div key={index} className="group relative">
+                              <div className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className={`w-2 h-2 bg-${color}-400 rounded-full flex-shrink-0`}></div>
+                                  <span className={`text-gray-700 group-hover:text-${color}-600 transition-colors font-medium`}>{service.service}</span>
+                                  <div className="flex-1 mx-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className={`h-full bg-${color}-400 rounded-full transition-all duration-500 group-hover:bg-${color}-500`} 
+                                         style={{width: `${width}%`}}></div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-3 text-sm">
+                                  <span className="text-gray-600 group-hover:text-gray-700 transition-colors">{service.count} times</span>
+                                  <span className={`font-medium text-gray-900 group-hover:text-${color}-600 transition-colors min-w-[3rem] text-right`}>{service.percentage.toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  </>
+
+                    {/* Recent Activity */}
+                    {analyticsData.spendingAnalysis.length > 0 && (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-gray-500">Last 5 transactions</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {analyticsData.spendingAnalysis.slice(0, 5).map((item, index) => {
+                            const colors = ['orange', 'blue', 'green', 'purple', 'pink'];
+                            const color = colors[index % colors.length];
+                            return (
+                              <div key={index} className="group relative">
+                                <div className="flex items-center justify-between py-3 px-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all duration-200 cursor-pointer">
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`w-2 h-2 bg-${color}-400 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform`}></div>
+                                    <div>
+                                      <div className={`font-medium text-gray-900 group-hover:text-${color}-600 transition-colors`}>{item.service}</div>
+                                      <div className="text-sm text-gray-600 group-hover:text-gray-500 transition-colors">{item.pet} • {item.date}</div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`font-medium text-gray-900 group-hover:text-${color}-600 transition-colors`}>₱{item.amount.toLocaleString()}</div>
+                                    <div className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <svg className={`w-4 h-4 text-${color}-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* Progress indicator */}
+                                <div className="absolute left-0 bottom-0 h-0.5 bg-gray-100 w-full">
+                                  <div className={`h-full bg-${color}-400 transition-all duration-300 group-hover:bg-${color}-500`} 
+                                       style={{width: `${((index + 1) / 5) * 100}%`}}></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          <div className="text-center">
+                            <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center space-x-1">
+                              <span>View all transactions</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -2677,23 +2718,23 @@ export default function PetOwnerDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Account Statistics</h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">{petOwnerStats.totalPets}</p>
+                    <div className="text-center p-4 border border-gray-200 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">{petOwnerStats.totalPets}</p>
                       <p className="text-sm text-gray-600">Total Pets</p>
                     </div>
                     
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">{petOwnerStats.completedAppointments}</p>
+                    <div className="text-center p-4 border border-gray-200 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">{petOwnerStats.completedAppointments}</p>
                       <p className="text-sm text-gray-600">Completed Visits</p>
                     </div>
                     
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <p className="text-2xl font-bold text-yellow-600">{petOwnerStats.upcomingAppointments}</p>
+                    <div className="text-center p-4 border border-gray-200 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">{petOwnerStats.upcomingAppointments}</p>
                       <p className="text-sm text-gray-600">Upcoming Visits</p>
                     </div>
                     
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <p className="text-2xl font-bold text-purple-600">₱{petOwnerStats.totalSpent.toLocaleString()}</p>
+                    <div className="text-center p-4 border border-gray-200 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">₱{petOwnerStats.totalSpent.toLocaleString()}</p>
                       <p className="text-sm text-gray-600">Total Spent</p>
                     </div>
                   </div>

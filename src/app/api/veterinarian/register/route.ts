@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
     // Validate file types and sizes
     const validateFile = (file: File, fieldName: string) => {
       const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-      const maxSizeInMB = 5;
+      const maxSizeInMB = 3; // Reduced to prevent 413 errors
       
       if (!allowedTypes.includes(file.type)) {
         throw new Error(`${fieldName} must be a valid image (JPEG, PNG) or PDF file`);
       }
       
       if (file.size > maxSizeInMB * 1024 * 1024) {
-        throw new Error(`${fieldName} must be less than 5MB`);
+        throw new Error(`${fieldName} must be less than ${maxSizeInMB}MB`);
       }
     };
     
