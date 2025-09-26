@@ -4,14 +4,31 @@ import { NextResponse } from 'next/server';
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const cookieStore = await cookies();
         const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+        const resolvedParams = await params;
         
-        // Get the current user
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // Get the current user - handle both cookies and Authorization header
+        let user, authError;
+        
+        // Check for Authorization header first
+        const authHeader = request.headers.get('authorization');
+        if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            const result = await supabase.auth.getUser(token);
+            user = result.data.user;
+            authError = result.error;
+            console.log('[Appointment API] Using Authorization header:', { user: user ? 'EXISTS' : 'NULL', authError });
+        } else {
+            // Fallback to cookies
+            const result = await supabase.auth.getUser();
+            user = result.data.user;
+            authError = result.error;
+            console.log('[Appointment API] Using cookies:', { user: user ? 'EXISTS' : 'NULL', authError });
+        }
         
         if (authError || !user) {
             return NextResponse.json(
@@ -20,7 +37,7 @@ export async function PATCH(
             );
         }
 
-        const appointmentId = parseInt(params.id);
+        const appointmentId = parseInt(resolvedParams.id);
         const body = await request.json();
         const { status, notes } = body;
 
@@ -35,6 +52,8 @@ export async function PATCH(
             .eq('id', appointmentId)
             .single();
 
+        console.log('[Appointment API] Appointment fetch result:', { appointment, fetchError });
+
         if (fetchError || !appointment) {
             return NextResponse.json(
                 { error: 'Appointment not found' },
@@ -45,13 +64,17 @@ export async function PATCH(
         // Check if user is authorized to update this appointment
         const { data: userProfile } = await supabase
             .from('profiles')
-            .select('user_role')
+            .select('user_role, is_active, verification_status')
             .eq('id', user.id)
             .single();
+
+        console.log('[Appointment API] User profile check:', { userProfile, userId: user.id });
 
         const isVet = appointment.veterinarians?.user_id === user.id;
         const isOwner = appointment.pet_owner_profiles?.user_id === user.id;
         const isAdmin = userProfile?.user_role === 'admin';
+        
+        console.log('[Appointment API] Authorization check:', { isVet, isOwner, isAdmin, appointmentVetId: appointment.veterinarians?.user_id, currentUserId: user.id });
 
         if (!isVet && !isOwner && !isAdmin) {
             return NextResponse.json(
@@ -129,11 +152,12 @@ export async function PATCH(
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const cookieStore = await cookies();
         const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+        const resolvedParams = await params;
         
         // Get the current user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -145,7 +169,7 @@ export async function GET(
             );
         }
 
-        const appointmentId = parseInt(params.id);
+        const appointmentId = parseInt(resolvedParams.id);
 
         // Get the appointment with related data
         const { data: appointment, error } = await supabase

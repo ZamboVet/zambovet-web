@@ -40,18 +40,28 @@ interface Appointment {
 
 export default function VeterinarianAppointments() {
     const { user } = useAuth();
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);  // Filtered appointments for current status
+    const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);  // All appointments for counting
     const [loading, setLoading] = useState(true);
     const [selectedStatus, setSelectedStatus] = useState('pending');
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         if (user) {
             fetchAppointments();
         }
-    }, [user, selectedStatus]);
+    }, [user]);
+    
+    // Handle status changes by filtering existing appointments
+    useEffect(() => {
+        if (allAppointments.length > 0) {
+            const filteredAppts = allAppointments.filter(apt => apt.status === selectedStatus);
+            setAppointments(filteredAppts);
+        }
+    }, [selectedStatus, allAppointments]);
 
     const fetchAppointments = async () => {
         try {
@@ -69,7 +79,7 @@ export default function VeterinarianAppointments() {
                 return;
             }
 
-            // Fetch appointments
+            // Fetch ALL appointments for this veterinarian (no status filter)
             const { data: appointmentsData, error } = await supabase
                 .from('appointments')
                 .select(`
@@ -79,14 +89,18 @@ export default function VeterinarianAppointments() {
                     clinics(name, address)
                 `)
                 .eq('veterinarian_id', vetProfile.id)
-                .eq('status', selectedStatus)
                 .order('appointment_date', { ascending: true })
                 .order('appointment_time', { ascending: true });
 
             if (error) {
                 console.error('Error fetching appointments:', error);
             } else {
-                setAppointments(appointmentsData || []);
+                const allAppts = appointmentsData || [];
+                setAllAppointments(allAppts);
+                
+                // Filter appointments for the currently selected status
+                const filteredAppts = allAppts.filter(apt => apt.status === selectedStatus);
+                setAppointments(filteredAppts);
             }
         } catch (error) {
             console.error('Error:', error);
@@ -99,10 +113,24 @@ export default function VeterinarianAppointments() {
         try {
             setUpdating(true);
             
+            // Get current session for authentication
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+                throw new Error('Authentication required. Please log in again.');
+            }
+            
+            console.log('[VeterinarianAppointments] Making API call with session:', {
+                userId: session.user.id,
+                appointmentId,
+                newStatus
+            });
+            
             const response = await fetch(`/api/appointments/${appointmentId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
                 },
                 credentials: 'include',
                 body: JSON.stringify({
@@ -111,13 +139,39 @@ export default function VeterinarianAppointments() {
             });
 
             const result = await response.json();
+            
+            console.log('[VeterinarianAppointments] API response:', {
+                ok: response.ok,
+                status: response.status,
+                result
+            });
 
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to update appointment');
             }
 
-            // Refresh appointments
-            fetchAppointments();
+            // Show success message
+            const statusMessages = {
+                confirmed: '✅ Appointment approved successfully!',
+                cancelled: '❌ Appointment cancelled successfully!',
+                completed: '🎉 Appointment marked as completed!',
+                pending: '⏳ Appointment moved to pending'
+            };
+            
+            const message = statusMessages[newStatus as keyof typeof statusMessages] || `Status updated to ${newStatus}`;
+            setSuccessMessage(message);
+            
+            // Auto-hide success message after 4 seconds
+            setTimeout(() => setSuccessMessage(null), 4000);
+
+            // Always refresh appointments to get the updated data
+            await fetchAppointments();
+            
+            // Smart status switching: if we just approved a pending appointment, switch to confirmed view
+            if (selectedStatus === 'pending' && newStatus === 'confirmed') {
+                console.log('[VeterinarianAppointments] Auto-switching to confirmed view');
+                setSelectedStatus('confirmed');
+            }
             
             // Close modal if open
             if (selectedAppointment?.id === appointmentId) {
@@ -198,10 +252,10 @@ export default function VeterinarianAppointments() {
                     {/* Enhanced Status Filter Pills */}
                     <div className="flex flex-wrap gap-3">
                         {[
-                            { key: 'pending', label: 'Pending', color: 'orange', count: appointments.filter(a => a.status === 'pending').length },
-                            { key: 'confirmed', label: 'Confirmed', color: 'blue', count: appointments.filter(a => a.status === 'confirmed').length },
-                            { key: 'completed', label: 'Completed', color: 'green', count: appointments.filter(a => a.status === 'completed').length },
-                            { key: 'cancelled', label: 'Cancelled', color: 'red', count: appointments.filter(a => a.status === 'cancelled').length }
+                            { key: 'pending', label: 'Pending', color: 'orange', count: allAppointments.filter(a => a.status === 'pending').length },
+                            { key: 'confirmed', label: 'Confirmed', color: 'blue', count: allAppointments.filter(a => a.status === 'confirmed').length },
+                            { key: 'completed', label: 'Completed', color: 'green', count: allAppointments.filter(a => a.status === 'completed').length },
+                            { key: 'cancelled', label: 'Cancelled', color: 'red', count: allAppointments.filter(a => a.status === 'cancelled').length }
                         ].map((status) => {
                             const isActive = selectedStatus === status.key;
                             const colorClasses = {
@@ -235,6 +289,26 @@ export default function VeterinarianAppointments() {
                     </div>
                 </div>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6 animate-fade-in">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <CheckCircleIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <p className="text-green-800 font-medium flex-1">{successMessage}</p>
+                        <button 
+                            onClick={() => setSuccessMessage(null)}
+                            className="text-green-600 hover:text-green-800 transition-colors p-1 rounded-full hover:bg-green-100"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Enhanced Appointments List */}
             {appointments.length === 0 ? (

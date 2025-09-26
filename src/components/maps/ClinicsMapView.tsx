@@ -24,7 +24,6 @@ interface Clinic {
     longitude: number;
     operating_hours: any;
     is_active: boolean;
-    is_emergency_available: boolean;
     created_at: string;
     veterinarians?: Veterinarian[];
 }
@@ -73,21 +72,21 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
             // Clear existing markers
             markersRef.current = [];
 
-            // Create custom clinic icon
-            const createClinicIcon = (isEmergency: boolean) => {
+            // Create simple clinic icon
+            const createClinicIcon = () => {
                 return L.divIcon({
                     className: 'custom-clinic-marker',
                     html: `
-                        <div class="clinic-marker ${isEmergency ? 'emergency' : 'regular'}">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2L2 7V20H22V7L12 2Z" fill="${isEmergency ? '#ef4444' : '#14b8a6'}" stroke="white" stroke-width="2"/>
+                        <div class="clinic-marker">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7V20H22V7L12 2Z" fill="#14b8a6" stroke="white" stroke-width="2"/>
                                 <path d="M9 14H15M12 11V17" stroke="white" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </div>
                     `,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
-                    popupAnchor: [0, -24]
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    popupAnchor: [0, -32]
                 });
             };
 
@@ -106,7 +105,7 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
             // Add markers for each clinic
             clinics.forEach(clinic => {
                 if (clinic.latitude && clinic.longitude) {
-                    const icon = createClinicIcon(clinic.is_emergency_available);
+                    const icon = createClinicIcon();
                     
                     const marker = L.marker([clinic.latitude, clinic.longitude], { icon })
                         .addTo(map)
@@ -114,7 +113,6 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
                             <div class="clinic-popup">
                                 <div class="clinic-popup-header">
                                     <h3 class="clinic-name">${clinic.name}</h3>
-                                    ${clinic.is_emergency_available ? '<span class="emergency-badge">🚨 Emergency</span>' : ''}
                                 </div>
                                 <div class="clinic-details">
                                     <p class="clinic-address">📍 ${clinic.address}</p>
@@ -161,15 +159,6 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
                     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
                 }
                 
-                .clinic-marker.emergency {
-                    animation: pulse 2s infinite;
-                }
-                
-                @keyframes pulse {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(1.1); }
-                    100% { transform: scale(1); }
-                }
                 
                 .clinic-popup {
                     min-width: 200px;
@@ -324,13 +313,6 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
                                 <span>{selectedClinic.veterinarians.length} veterinarian{selectedClinic.veterinarians.length > 1 ? 's' : ''}</span>
                             </div>
                         )}
-                        
-                        {selectedClinic.is_emergency_available && (
-                            <div className="flex items-center space-x-2 text-red-600">
-                                <span className="text-lg">🚨</span>
-                                <span className="font-medium">Emergency Available</span>
-                            </div>
-                        )}
                     </div>
                     
                     <button className="w-full mt-3 bg-teal-600 text-white text-xs py-2 px-3 rounded-md hover:bg-teal-700 transition-colors">
@@ -342,15 +324,9 @@ export default function ClinicsMapView({ clinics, height = "500px", className = 
             {/* Map Legend */}
             <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-10">
                 <div className="text-xs font-medium text-gray-700 mb-2">Legend</div>
-                <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-teal-500 rounded-sm flex-shrink-0"></div>
-                        <span className="text-xs text-gray-600">Regular Clinic</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-sm animate-pulse flex-shrink-0"></div>
-                        <span className="text-xs text-gray-600">Emergency Available</span>
-                    </div>
+                <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-teal-500 rounded-sm flex-shrink-0"></div>
+                    <span className="text-xs text-gray-600">Veterinary Clinic</span>
                 </div>
             </div>
         </div>

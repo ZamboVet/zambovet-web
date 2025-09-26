@@ -1645,9 +1645,9 @@ export default function PetOwnerDashboard() {
                     </div>
                   </div>
 
-                  {/* Pet Summary */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Pet Care Summary</h3>
+                {/* Pet Summary - Second Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Pet Care Summary</h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Pets</span>
@@ -1686,8 +1686,8 @@ export default function PetOwnerDashboard() {
 
                 {/* Recent Pets */}
                 {pets.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Your Pets</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Appointment Reminders</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {pets.slice(0, 6).map((pet) => (
                         <div key={pet.id} className="p-4 bg-stone-50 rounded-lg border border-stone-200">
@@ -1754,7 +1754,7 @@ export default function PetOwnerDashboard() {
                     {/* Pet Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {pets.map((pet) => (
-                      <div key={pet.id} className="group relative bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:scale-[1.02] hover:border-blue-200 overflow-hidden">
+                      <div key={pet.id} className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 transition-all duration-300 hover:scale-[1.02] hover:border-blue-200 dark:hover:border-blue-600 overflow-hidden">
                           {/* Background Gradient Overlay */}
                           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-blue-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           
@@ -1786,8 +1786,8 @@ export default function PetOwnerDashboard() {
                                 
                                 {/* Pet Info */}
                                 <div className="flex-1">
-                                  <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{pet.name}</h3>
-                                  <p className="text-gray-600 font-medium capitalize">{pet.species}</p>
+                                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">{pet.name}</h3>
+                                  <p className="text-gray-600 dark:text-gray-300 font-medium capitalize">{pet.species}</p>
                                   <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                                     {pet.breed || 'Mixed Breed'}
                                   </div>
@@ -1822,13 +1822,13 @@ export default function PetOwnerDashboard() {
                             
                             {/* Stats Grid */}
                             <div className="grid grid-cols-2 gap-4 mb-4">
-                              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:bg-gray-100 transition-colors">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Gender</div>
-                                <div className="text-lg font-bold text-gray-900 capitalize">{pet.gender || 'Unknown'}</div>
+                              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Gender</div>
+                                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 capitalize">{pet.gender || 'Unknown'}</div>
                               </div>
-                              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:bg-gray-100 transition-colors">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Weight</div>
-                                <div className="text-lg font-bold text-gray-900">{pet.weight ? `${pet.weight} kg` : 'N/A'}</div>
+                              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Weight</div>
+                                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{pet.weight ? `${pet.weight} kg` : 'N/A'}</div>
                               </div>
                             </div>
                             
@@ -1919,14 +1919,14 @@ export default function PetOwnerDashboard() {
             {activeTab === 'appointments' && (
               <div className="space-y-6">
                 {/* Appointments Header */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
                       <CalendarDaysIcon className="w-6 h-6 text-[#0032A0] mr-2" />
                         My Appointments
                       </h2>
-                    <p className="text-gray-600 text-sm mt-1">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
                         Track your pet's healthcare appointments and history
                       </p>
                     </div>
@@ -1942,62 +1942,62 @@ export default function PetOwnerDashboard() {
 
                 {/* Appointment Status Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-amber-100 rounded-lg">
-                        <ClockIcon className="w-5 h-5 text-amber-600" />
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
+                        <ClockIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                       </div>
                       <div>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {appointments.filter(apt => apt.status === 'pending').length}
                         </p>
-                      <p className="text-xs text-gray-600">Pending</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Pending</p>
                       </div>
                     </div>
                   </div>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-[#0032A0]/10 rounded-lg">
-                      <CheckCircleIcon className="w-5 h-5 text-[#0032A0]" />
+                    <div className="p-2 bg-[#0032A0]/10 dark:bg-blue-900/50 rounded-lg">
+                      <CheckCircleIcon className="w-5 h-5 text-[#0032A0] dark:text-blue-400" />
                       </div>
                       <div>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {appointments.filter(apt => apt.status === 'confirmed').length}
                         </p>
-                      <p className="text-xs text-gray-600">Confirmed</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmed</p>
                       </div>
                     </div>
                   </div>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-emerald-100 rounded-lg">
-                        <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
+                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
+                        <CheckCircleIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {appointments.filter(apt => apt.status === 'completed').length}
                         </p>
-                      <p className="text-xs text-gray-600">Completed</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
                       </div>
                     </div>
                   </div>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-stone-100 rounded-lg">
-                        <CalendarDaysIcon className="w-5 h-5 text-stone-600" />
+                      <div className="p-2 bg-stone-100 dark:bg-stone-700 rounded-lg">
+                        <CalendarDaysIcon className="w-5 h-5 text-stone-600 dark:text-stone-400" />
                       </div>
                       <div>
-                      <p className="text-2xl font-bold text-gray-900">{appointments.length}</p>
-                      <p className="text-xs text-gray-600">Total</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{appointments.length}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Appointments List */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Appointment History</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Appointment History</h3>
                   </div>
 
                   {appointments.length === 0 ? (
@@ -2634,7 +2634,7 @@ export default function PetOwnerDashboard() {
                         <UserCircleIcon className="w-6 h-6 text-[#0032A0] mr-2" />
                         My Profile
                       </h2>
-                      <p className="text-gray-600 text-sm mt-1">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
                         Manage your account information and contact details
                       </p>
                     </div>

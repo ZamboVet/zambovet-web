@@ -9,7 +9,6 @@ import {
     EnvelopeIcon,
     StarIcon,
     ClockIcon,
-    ExclamationTriangleIcon,
     UserIcon,
     BuildingOfficeIcon,
     AcademicCapIcon,
@@ -18,10 +17,6 @@ import {
     HeartIcon,
     MapIcon
 } from '@heroicons/react/24/outline';
-import {
-    StarIcon as StarIconSolid,
-    ExclamationTriangleIcon as EmergencyIconSolid
-} from '@heroicons/react/24/solid';
 
 // Dynamically import ClinicsMapView to avoid SSR issues with Leaflet
 const ClinicsMapView = dynamic(() => import('@/components/maps/ClinicsMapView'), {
@@ -63,7 +58,6 @@ interface Clinic {
 interface SearchFilters {
     search: string;
     specialty: string;
-    emergency: boolean;
 }
 
 export default function FindClinics() {
@@ -77,8 +71,7 @@ export default function FindClinics() {
     const [selectedVet, setSelectedVet] = useState<Veterinarian | undefined>(undefined);
     const [filters, setFilters] = useState<SearchFilters>({
         search: '',
-        specialty: '',
-        emergency: false
+        specialty: ''
     });
     const [pagination, setPagination] = useState({
         page: 1,
@@ -107,7 +100,6 @@ export default function FindClinics() {
             const searchParams = new URLSearchParams({
                 search: filters.search,
                 specialty: filters.specialty,
-                emergency: filters.emergency.toString(),
                 page: pagination.page.toString(),
                 limit: pagination.limit.toString()
             });
@@ -143,7 +135,7 @@ export default function FindClinics() {
         }, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [filters.search, filters.specialty, filters.emergency]);
+    }, [filters.search, filters.specialty]);
 
     // Immediate fetch on page change
     useEffect(() => {
@@ -159,8 +151,7 @@ export default function FindClinics() {
     const resetFilters = () => {
         setFilters({
             search: '',
-            specialty: '',
-            emergency: false
+            specialty: ''
         });
         setPagination(prev => ({ ...prev, page: 1 }));
     };
@@ -290,35 +281,17 @@ export default function FindClinics() {
 
             {/* Search and Filters */}
             <form onSubmit={handleSearch} className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="mb-4">
                     {/* Search Input */}
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <input
-                                type="text"
-                                value={filters.search}
-                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                                placeholder="Search clinics by name or location..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-black placeholder-gray-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Emergency Toggle */}
-                    <div className="flex items-center">
-                        <label className="flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={filters.emergency}
-                                onChange={(e) => setFilters(prev => ({ ...prev, emergency: e.target.checked }))}
-                                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                            />
-                            <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                <ExclamationTriangleIcon className="w-4 h-4 text-red-500 mr-1" />
-                                Emergency Only
-                            </span>
-                        </label>
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                            type="text"
+                            value={filters.search}
+                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                            placeholder="Search clinics by name or location..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-black placeholder-gray-500"
+                        />
                     </div>
                 </div>
 
@@ -361,11 +334,8 @@ export default function FindClinics() {
                                     {/* Clinic Header */}
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900 text-lg flex items-center">
+                                            <h3 className="font-bold text-gray-900 text-lg">
                                                 {clinic.name}
-                                                {clinic.is_emergency_available && (
-                                                    <EmergencyIconSolid className="w-4 h-4 text-red-500 ml-2" title="Emergency Available" />
-                                                )}
                                             </h3>
                                             <div className="flex items-center text-gray-600 text-sm mt-1">
                                                 <MapPinIcon className="w-4 h-4 mr-1" />

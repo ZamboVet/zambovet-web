@@ -50,12 +50,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (userId: string, retries = 2): Promise<UserProfile | null> => {
+  // Helper function to process profile data
+  const processProfile = (profile: any): UserProfile => {
+    console.log(`[AuthContext] Processing profile:`, {
+      userId: profile.id,
+      userRole: profile.user_role,
+      hasPetOwnerProfiles: !!profile.pet_owner_profiles,
+      hasVeterinarians: !!profile.veterinarians
+    });
+
+    // Extract role profile from joined data
+    let roleProfile = null;
+    if (profile.user_role === 'pet_owner' && profile.pet_owner_profiles) {
+      roleProfile = Array.isArray(profile.pet_owner_profiles) 
+        ? profile.pet_owner_profiles[0] 
+        : profile.pet_owner_profiles;
+    } else if (profile.user_role === 'veterinarian' && profile.veterinarians) {
+      roleProfile = Array.isArray(profile.veterinarians) 
+        ? profile.veterinarians[0] 
+        : profile.veterinarians;
+    }
+
+    console.log(`[AuthContext] Role profile extracted:`, { roleProfile: roleProfile ? 'EXISTS' : 'NULL' });
+
+    // Clean up the profile object
+    const { pet_owner_profiles, veterinarians, ...cleanProfile } = profile;
+    const finalProfile = { ...cleanProfile, roleProfile };
+    
+    console.log(`[AuthContext] Final profile:`, {
+      id: finalProfile.id,
+      email: finalProfile.email,
+      full_name: finalProfile.full_name,
+      user_role: finalProfile.user_role,
+      hasRoleProfile: !!finalProfile.roleProfile
+    });
+    
+    return finalProfile;
+  };
+
+  const fetchUserProfile = async (userId: string, retries = 3): Promise<UserProfile | null> => {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         if (attempt > 0) {
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt)); // Reduce delay
+          // Exponential backoff: 200ms, 400ms, 800ms
+          await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempt)));
         }
+
+        console.log(`[AuthContext] Fetching profile for user: ${userId} (attempt ${attempt + 1}/${retries})`);
 
         // Single optimized query with joins to reduce round trips
         const { data: profile, error } = await supabase
@@ -68,34 +109,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', userId)
           .single();
 
-        // If profile is missing, skip auto-creation to avoid delays
-        if (!profile || error) {
-          if (error?.code === 'PGRST116' && attempt < retries - 1) {
-            console.log(`Profile not found, retrying... (${attempt + 1}/${retries})`);
-            continue;
+        console.log(`[AuthContext] Profile query result:`, { profile: profile ? 'EXISTS' : 'NULL', error });
+
+        // If profile exists, process and return it
+        if (profile && !error) {
+          console.log(`[AuthContext] Profile found on attempt ${attempt + 1}`);
+          return processProfile(profile);
+        }
+
+        // If profile is missing and this is not the last attempt, retry
+        if (error?.code === 'PGRST116' && attempt < retries - 1) {
+          console.log(`[AuthContext] Profile not found, retrying... (${attempt + 1}/${retries})`);
+          continue;
+        }
+
+        // If profile is still missing on final attempt, try to create it
+        console.warn('[AuthContext] Profile not found after all attempts, attempting to create:', error);
+        
+        // Try to create a basic profile from auth user data
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser.user && authUser.user.id === userId) {
+          console.log('[AuthContext] Creating missing profile from auth data');
+          
+          try {
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                email: authUser.user.email,
+                full_name: authUser.user.user_metadata?.full_name || null,
+                user_role: authUser.user.user_metadata?.user_role || 'pet_owner',
+                is_active: true,
+                verification_status: 'approved'
+              })
+              .select(`
+                *,
+                pet_owner_profiles(*),
+                veterinarians(*)
+              `)
+              .single();
+              
+            if (newProfile && !createError) {
+              console.log('[AuthContext] Successfully created missing profile');
+              return processProfile(newProfile);
+            } else {
+              console.error('[AuthContext] Failed to create profile:', createError);
+            }
+          } catch (createErr) {
+            console.error('[AuthContext] Error creating profile:', createErr);
           }
-          console.error('Profile not found or error:', error);
-          return null;
         }
+        
+        return null;
 
-        // Process the joined data from the single query
-        if (!profile) return null;
-
-        // Extract role profile from joined data
-        let roleProfile = null;
-        if (profile.user_role === 'pet_owner' && profile.pet_owner_profiles) {
-          roleProfile = Array.isArray(profile.pet_owner_profiles) 
-            ? profile.pet_owner_profiles[0] 
-            : profile.pet_owner_profiles;
-        } else if (profile.user_role === 'veterinarian' && profile.veterinarians) {
-          roleProfile = Array.isArray(profile.veterinarians) 
-            ? profile.veterinarians[0] 
-            : profile.veterinarians;
-        }
-
-        // Clean up the profile object
-        const { pet_owner_profiles, veterinarians, ...cleanProfile } = profile;
-        return { ...cleanProfile, roleProfile };
       } catch (error) {
         console.error(`Error in fetchUserProfile (attempt ${attempt + 1}):`, error);
         if (attempt === retries - 1) {
@@ -161,18 +227,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Always set loading to false first so UI can render
+        setLoading(false);
+        
         if (session?.user) {
-          // Load profile in background, don't block UI
-          fetchUserProfile(session.user.id, 1).then(profile => {
+          console.log(`[AuthContext] Initial session found, loading profile in background for user: ${session.user.id}`);
+          
+          // Load profile in background with more retries for initial load
+          fetchUserProfile(session.user.id, 3).then(profile => {
             if (mounted) {
+              console.log(`[AuthContext] Initial profile load completed:`, { profile: profile ? 'SUCCESS' : 'FAILED' });
               setUserProfile(profile);
             }
           }).catch(error => {
-            console.error('Error loading profile:', error);
+            console.error('[AuthContext] Error loading initial profile:', error);
+            // Profile loading failed, but don't block UI - user can still interact
           });
         }
-        
-        setLoading(false);
       } catch (error) {
         console.error('Failed to get initial session:', error);
         if (mounted) {
@@ -197,13 +268,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Reduce retries for faster auth state changes
-          const retries = event === 'SIGNED_IN' ? 2 : 1;
-          const profile = await fetchUserProfile(session.user.id, retries);
-          if (mounted) {
-            setUserProfile(profile);
+          // Use more retries for sign-in events, fewer for others
+          const retries = event === 'SIGNED_IN' ? 3 : 2;
+          console.log(`[AuthContext] Auth state changed to ${event}, loading profile for user: ${session.user.id}`);
+          
+          try {
+            const profile = await fetchUserProfile(session.user.id, retries);
+            if (mounted) {
+              console.log(`[AuthContext] Auth change profile load:`, { 
+                event, 
+                profile: profile ? 'SUCCESS' : 'FAILED',
+                userId: session.user.id 
+              });
+              setUserProfile(profile);
+            }
+          } catch (error) {
+            console.error(`[AuthContext] Profile load failed for ${event}:`, error);
+            // Don't set userProfile to null if it was already loaded - keep existing data
+            if (mounted && !userProfile) {
+              setUserProfile(null);
+            }
           }
         } else {
+          console.log(`[AuthContext] No session, clearing profile`);
           setUserProfile(null);
         }
       }
