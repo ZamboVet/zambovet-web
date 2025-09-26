@@ -13,13 +13,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Configure API routes for file uploads
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
-  // Configure body parser for larger file uploads
-  serverRuntimeConfig: {
-    maxFileSize: '10mb',
-  },
+  serverExternalPackages: [],
 };
 
 export default nextConfig;

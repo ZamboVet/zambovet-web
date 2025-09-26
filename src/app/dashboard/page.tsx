@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import FindClinics from '@/components/dashboard/FindClinics';
+import UserSettingsPanel from '@/components/settings/UserSettingsPanel';
 import { supabase } from '@/lib/supabase';
 // Removed unused sanitize imports - they are only needed in API routes
 import {
@@ -26,7 +28,8 @@ import {
   ArrowRightOnRectangleIcon,
   ChartPieIcon,
   StarIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 // Simple sanitization functions for client-side use
@@ -105,6 +108,7 @@ interface AnalyticsData {
 
 export default function PetOwnerDashboard() {
   const { user, userProfile, signOut } = useAuth();
+  const { settings, formatTime, formatDate, formatDateTime } = useSettings();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [petOwnerStats, setPetOwnerStats] = useState<PetOwnerStats>({
@@ -1439,7 +1443,7 @@ export default function PetOwnerDashboard() {
 
   return (
     <ProtectedRoute requiredRole="pet_owner">
-      <div className="min-h-screen bg-gray-100 pb-20">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
           {/* Header */}
         <div className="bg-gradient-to-r from-[#0032A0] to-[#0053d6] px-4 pt-16 pb-8">
             <div className="max-w-7xl mx-auto">
@@ -1498,7 +1502,8 @@ export default function PetOwnerDashboard() {
                     { id: 'appointments', name: 'Appointments', icon: CalendarDaysIcon },
                     { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
                     { id: 'clinics', name: 'Clinics', icon: BuildingOfficeIcon },
-                    { id: 'profile', name: 'Profile', icon: UserCircleIcon }
+                    { id: 'profile', name: 'Profile', icon: UserCircleIcon },
+                    { id: 'settings', name: 'Settings', icon: CogIcon }
                   ].map((tab) => (
                     <button
                       type="button"
@@ -1527,7 +1532,8 @@ export default function PetOwnerDashboard() {
                 { id: 'appointments', name: 'Appointments', icon: CalendarDaysIcon, shortName: 'Book' },
                 { id: 'analytics', name: 'Analytics', icon: ChartPieIcon, shortName: 'Stats' },
                 { id: 'clinics', name: 'Clinics', icon: BuildingOfficeIcon, shortName: 'Clinics' },
-                { id: 'profile', name: 'Profile', icon: UserCircleIcon, shortName: 'Me' }
+                { id: 'profile', name: 'Profile', icon: UserCircleIcon, shortName: 'Me' },
+                { id: 'settings', name: 'Settings', icon: CogIcon, shortName: 'Set' }
               ].map((tab) => (
                 <button
                   type="button"
@@ -2181,14 +2187,13 @@ export default function PetOwnerDashboard() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-900">
-                                    {new Date(appointment.appointment_date).toLocaleDateString('en-US', {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    })}
+                                    {formatDate(appointment.appointment_date)}
                                   </div>
-                                <div className="text-sm text-gray-500">{appointment.appointment_time}</div>
+                                <div className="text-sm text-gray-500">
+                                    {appointment.appointment_time ? formatTime(
+                                      new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
+                                    ) : appointment.appointment_time}
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-900">{appointment.clinics?.name}</div>
@@ -2671,11 +2676,7 @@ export default function PetOwnerDashboard() {
                     <div className="flex-1">
                       <h4 className="text-xl font-bold text-gray-900">{petOwnerProfile?.full_name || 'Pet Owner'}</h4>
                       <p className="text-gray-600">Member since {petOwnerProfile?.created_at 
-                        ? new Date(petOwnerProfile.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })
+                        ? formatDate(petOwnerProfile.created_at)
                         : 'Unknown'
                       }</p>
                     </div>
@@ -2739,6 +2740,13 @@ export default function PetOwnerDashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === 'settings' && (
+              <div className="space-y-6">
+                <UserSettingsPanel />
               </div>
             )}
           </div>
