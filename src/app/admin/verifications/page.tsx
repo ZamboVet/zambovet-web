@@ -20,10 +20,7 @@ interface VeterinarianVerification {
   email: string;
   full_name: string;
   phone: string;
-  specialization: string;
   license_number: string;
-  years_experience: number;
-  consultation_fee: number;
   clinic_id?: string;
   business_permit_url: string;
   professional_license_url?: string;
@@ -142,10 +139,7 @@ export default function AdminVerificationDashboard() {
           .upsert({
             user_id: profileData.id,
             full_name: verification.full_name,
-            specialization: verification.specialization,
             license_number: verification.license_number,
-            years_experience: verification.years_experience,
-            consultation_fee: verification.consultation_fee,
             is_available: true,
             average_rating: 0,
             created_at: new Date().toISOString(),
@@ -453,8 +447,6 @@ export default function AdminVerificationDashboard() {
                           <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                             <span>{verification.email}</span>
                             <span>•</span>
-                            <span>{verification.specialization}</span>
-                            <span>•</span>
                             <span>License: {verification.license_number}</span>
                           </div>
                           <p className="mt-1 text-sm text-gray-500">
@@ -512,16 +504,8 @@ export default function AdminVerificationDashboard() {
                       <p className="mt-1 text-sm text-gray-900">{selectedVerification.phone}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Specialization</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedVerification.specialization}</p>
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium text-gray-700">License Number</label>
                       <p className="mt-1 text-sm text-gray-900">{selectedVerification.license_number}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedVerification.years_experience}</p>
                     </div>
                   </div>
 

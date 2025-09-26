@@ -165,146 +165,232 @@ export default function VeterinarianAppointments() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-                <span className="ml-3 text-gray-600">Loading appointments...</span>
+            <div className="flex flex-col items-center justify-center py-16">
+                <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 animate-pulse">
+                        <CalendarDaysIcon className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="absolute inset-0 border-4 border-blue-200 rounded-2xl animate-ping"></div>
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Loading Appointments</h3>
+                    <p className="text-slate-600">Please wait while we fetch your appointment data...</p>
+                </div>
+                <div className="flex space-x-1 mt-6">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900">My Appointments</h2>
-                    <p className="text-gray-600">Manage your scheduled appointments</p>
-                </div>
-                
-                {/* Status Filter */}
-                <div className="flex space-x-2">
-                    {['pending', 'confirmed', 'completed', 'cancelled'].map((status) => (
-                        <button
-                            key={status}
-                            onClick={() => setSelectedStatus(status)}
-                            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                                selectedStatus === status
-                                    ? 'bg-teal-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                        >
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </button>
-                    ))}
+            {/* Enhanced Header with Status Filter Pills */}
+            <div className="mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Appointment Management</h2>
+                        <p className="text-slate-600">View, manage, and respond to patient appointments</p>
+                    </div>
+                    
+                    {/* Enhanced Status Filter Pills */}
+                    <div className="flex flex-wrap gap-3">
+                        {[
+                            { key: 'pending', label: 'Pending', color: 'orange', count: appointments.filter(a => a.status === 'pending').length },
+                            { key: 'confirmed', label: 'Confirmed', color: 'blue', count: appointments.filter(a => a.status === 'confirmed').length },
+                            { key: 'completed', label: 'Completed', color: 'green', count: appointments.filter(a => a.status === 'completed').length },
+                            { key: 'cancelled', label: 'Cancelled', color: 'red', count: appointments.filter(a => a.status === 'cancelled').length }
+                        ].map((status) => {
+                            const isActive = selectedStatus === status.key;
+                            const colorClasses = {
+                                orange: isActive 
+                                    ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-200' 
+                                    : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
+                                blue: isActive 
+                                    ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-200' 
+                                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+                                green: isActive 
+                                    ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-200' 
+                                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
+                                red: isActive 
+                                    ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200' 
+                                    : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                            };
+                            
+                            return (
+                                <button
+                                    key={status.key}
+                                    onClick={() => setSelectedStatus(status.key)}
+                                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl border-2 font-medium transition-all duration-300 transform ${isActive ? 'scale-105' : 'hover:scale-105'} ${colorClasses[status.color]}`}
+                                >
+                                    <span>{status.label}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-white/80 text-slate-700'}`}>
+                                        {status.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
-            {/* Appointments List */}
+            {/* Enhanced Appointments List */}
             {appointments.length === 0 ? (
-                <div className="text-center py-12">
-                    <CalendarDaysIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500 text-lg">No {selectedStatus} appointments</p>
-                    <p className="text-gray-400 text-sm">You have no appointments in this status</p>
+                <div className="text-center py-16">
+                    <div className="w-20 h-20 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CalendarDaysIcon className="w-10 h-10 text-slate-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 mb-2">No {selectedStatus} appointments</h3>
+                    <p className="text-slate-600 max-w-md mx-auto mb-6">
+                        You have no appointments in this status. {selectedStatus === 'pending' ? 'New appointment requests will appear here.' : `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} appointments will be listed here.`}
+                    </p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-w-sm mx-auto">
+                        <p className="text-slate-700 font-medium text-sm">💡 Tip</p>
+                        <p className="text-slate-600 text-sm mt-1">Use the filter pills above to view appointments in different statuses</p>
+                    </div>
                 </div>
             ) : (
-                <div className="grid gap-4">
-                    {appointments.map((appointment) => (
-                        <div key={appointment.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-3">
-                                        <div className={`p-2 rounded-full ${getStatusColor(appointment.status)}`}>
-                                            {getStatusIcon(appointment.status)}
+                <div className="grid gap-6">
+                    {appointments.map((appointment) => {
+                        const statusColorMap = {
+                            pending: 'from-orange-50 to-orange-100 border-orange-200',
+                            confirmed: 'from-blue-50 to-blue-100 border-blue-200',
+                            completed: 'from-green-50 to-green-100 border-green-200',
+                            cancelled: 'from-red-50 to-red-100 border-red-200'
+                        };
+                        
+                        return (
+                            <div key={appointment.id} className={`bg-gradient-to-r ${statusColorMap[appointment.status]} rounded-2xl border-2 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-start space-x-4 mb-4">
+                                            <div className={`p-3 rounded-xl ${getStatusColor(appointment.status)} shadow-sm`}>
+                                                {getStatusIcon(appointment.status)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <h3 className="text-lg font-bold text-slate-900">
+                                                        {appointment.patients.name}
+                                                    </h3>
+                                                    <span className="text-slate-600">•</span>
+                                                    <span className="text-slate-700 font-medium">{appointment.patients.species}</span>
+                                                </div>
+                                                <p className="text-sm text-slate-600 mb-1">
+                                                    {appointment.patients.breed}
+                                                </p>
+                                                <p className="text-sm text-slate-700 font-medium">
+                                                    Owner: {appointment.pet_owner_profiles.full_name}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900">
-                                                {appointment.patients.name} - {appointment.patients.species}
-                                            </h3>
-                                            <p className="text-sm text-gray-600">
-                                                {appointment.patients.breed} • {appointment.pet_owner_profiles.full_name}
-                                            </p>
-                                        </div>
-                                    </div>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                        <div className="flex items-center space-x-2">
-                                            <CalendarDaysIcon className="w-4 h-4 text-gray-500" />
-                                            <span className="text-gray-700">
-                                                {new Date(appointment.appointment_date).toLocaleDateString()}
-                                            </span>
+                                        {/* Enhanced Appointment Details */}
+                                        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                                                        <CalendarDaysIcon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-slate-600 font-medium">Date</p>
+                                                        <p className="text-sm font-semibold text-slate-900">
+                                                            {new Date(appointment.appointment_date).toLocaleDateString('en-US', {
+                                                                weekday: 'short',
+                                                                month: 'short',
+                                                                day: 'numeric'
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                                                        <ClockIcon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-slate-600 font-medium">Time</p>
+                                                        <p className="text-sm font-semibold text-slate-900">{appointment.appointment_time}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                                                        <BuildingOfficeIcon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-slate-600 font-medium">Clinic</p>
+                                                        <p className="text-sm font-semibold text-slate-900">{appointment.clinics.name}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <ClockIcon className="w-4 h-4 text-gray-500" />
-                                            <span className="text-gray-700">{appointment.appointment_time}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
-                                            <span className="text-gray-700">{appointment.clinics.name}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {appointment.reason_for_visit && (
-                                        <div className="mt-3">
-                                            <p className="text-sm text-gray-600">
-                                                <span className="font-medium">Reason:</span> {appointment.reason_for_visit}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="flex flex-col items-end space-y-2">
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        ₱{appointment.total_amount.toLocaleString()}
-                                    </span>
-                                    
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => {
-                                                setSelectedAppointment(appointment);
-                                                setShowDetailsModal(true);
-                                            }}
-                                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                                            title="View Details"
-                                        >
-                                            <EyeIcon className="w-4 h-4" />
-                                        </button>
                                         
-                                        {appointment.status === 'pending' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
-                                                    disabled={updating}
-                                                    className="p-2 text-green-600 hover:text-green-900 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50"
-                                                    title="Confirm Appointment"
-                                                >
-                                                    <CheckCircleIcon className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
-                                                    disabled={updating}
-                                                    className="p-2 text-red-600 hover:text-red-900 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
-                                                    title="Cancel Appointment"
-                                                >
-                                                    <XCircleIcon className="w-4 h-4" />
-                                                </button>
-                                            </>
+                                        {appointment.reason_for_visit && (
+                                            <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4">
+                                                <p className="text-xs text-slate-600 font-medium mb-1">Reason for Visit</p>
+                                                <p className="text-sm text-slate-800 font-medium">{appointment.reason_for_visit}</p>
+                                            </div>
                                         )}
+                                    </div>
+                                    
+                                    <div className="flex flex-col items-end space-y-4">
+                                        <div className="text-right">
+                                            <p className="text-xs text-slate-600 font-medium">Total Fee</p>
+                                            <p className="text-xl font-bold text-slate-900">
+                                                ₱{appointment.total_amount.toLocaleString()}
+                                            </p>
+                                        </div>
                                         
-                                        {appointment.status === 'confirmed' && (
+                                        <div className="flex items-center space-x-2">
+                                            {/* Enhanced Action Buttons */}
                                             <button
-                                                onClick={() => handleStatusUpdate(appointment.id, 'completed')}
-                                                disabled={updating}
-                                                className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
-                                                title="Mark as Completed"
+                                                onClick={() => {
+                                                    setSelectedAppointment(appointment);
+                                                    setShowDetailsModal(true);
+                                                }}
+                                                className="p-3 bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md"
+                                                title="View Details"
                                             >
-                                                <CheckCircleIcon className="w-4 h-4" />
+                                                <EyeIcon className="w-5 h-5" />
                                             </button>
-                                        )}
+                                            
+                                            {appointment.status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
+                                                        disabled={updating}
+                                                        className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:transform-none"
+                                                        title="Confirm Appointment"
+                                                    >
+                                                        <CheckCircleIcon className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
+                                                        disabled={updating}
+                                                        className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:transform-none"
+                                                        title="Cancel Appointment"
+                                                    >
+                                                        <XCircleIcon className="w-5 h-5" />
+                                                    </button>
+                                                </>
+                                            )}
+                                            
+                                            {appointment.status === 'confirmed' && (
+                                                <button
+                                                    onClick={() => handleStatusUpdate(appointment.id, 'completed')}
+                                                    disabled={updating}
+                                                    className="p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:transform-none"
+                                                    title="Mark as Completed"
+                                                >
+                                                    <CheckCircleIcon className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 

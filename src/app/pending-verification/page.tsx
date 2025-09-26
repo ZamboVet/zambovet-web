@@ -21,7 +21,6 @@ interface VerificationStatus {
   reviewed_at?: string;
   admin_remarks?: string;
   full_name: string;
-  specialization?: string;
   license_number: string;
 }
 
@@ -163,10 +162,6 @@ export default function PendingVerificationPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">License Number</label>
                   <p className="mt-1 text-sm text-gray-900">{verificationData.license_number}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Specialization</label>
-                  <p className="mt-1 text-sm text-gray-900">{verificationData.specialization || 'General Practice'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Application Submitted</label>

@@ -12,11 +12,78 @@ import {
   EnvelopeIcon,
   MapPinIcon
 } from '@heroicons/react/24/solid';
+import { supabase } from '@/lib/supabase';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const router = useRouter();
+  const [settings, setSettings] = useState({
+    heroTitle: 'Professional Pet Care Made Simple',
+    heroSubtitle: 'Book veterinary appointments online, manage your pet\'s health records, and connect with experienced veterinarians who care about your furry family members.',
+    heroButtonText: 'Book Appointment',
+    heroLearnMoreText: 'Learn More',
+    servicesTitle: 'Our Services',
+    servicesSubtitle: 'Comprehensive veterinary care tailored to your pet\'s unique needs',
+    aboutTitle: 'Why Choose ZamboVet?',
+    aboutSubtitle: 'We combine modern technology with compassionate care to provide the best possible experience for you and your pets. Our platform makes veterinary care accessible, convenient, and stress-free.',
+    contactTitle: 'Get In Touch',
+    contactSubtitle: 'Have questions? We\'re here to help. Reach out to us anytime.',
+    contactPhone: '+639123456789',
+    contactEmail: 'vetzambo@gmail.com',
+    contactAddress: 'Lorem Ipsum, Zamboanga City',
+    companyName: 'ZamboVet',
+    primaryColor: '#0032A0',
+    secondaryColor: '#b3c7e6',
+    accentColor: '#fffbde'
+  });
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Load settings from database or localStorage
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        // Try to fetch from database first
+        const { data, error } = await supabase
+          .from('landing_page_settings')
+          .select('*')
+          .single();
+        
+        if (data && !error && data.settings) {
+          console.log('Settings loaded from database:', data.settings);
+          setSettings(data.settings);
+        } else {
+          // Fallback to localStorage
+          const localSettings = localStorage.getItem('zambovet_landing_settings');
+          if (localSettings) {
+            const parsedSettings = JSON.parse(localSettings);
+            console.log('Settings loaded from localStorage:', parsedSettings);
+            setSettings(parsedSettings);
+          } else {
+            console.log('Using default settings');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        // Fallback to localStorage on error
+        try {
+          const localSettings = localStorage.getItem('zambovet_landing_settings');
+          if (localSettings) {
+            const parsedSettings = JSON.parse(localSettings);
+            console.log('Settings loaded from localStorage (fallback):', parsedSettings);
+            setSettings(parsedSettings);
+          }
+        } catch (localError) {
+          console.error('Error loading from localStorage:', localError);
+        }
+      } finally {
+        // Always set loaded to true after attempting to load
+        setSettingsLoaded(true);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,9 +106,10 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white">
       {/* Navigation */}
       <nav
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-[#0032A0]/95 backdrop-blur-md shadow-lg' : 'bg-transparent'}
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'backdrop-blur-md shadow-lg' : 'bg-transparent'}
           ios-safe-area-nav`}
         style={{
+          backgroundColor: isScrolled ? `${settings.primaryColor}F2` : 'transparent', // F2 = 95% opacity
           WebkitBackdropFilter: isScrolled ? 'blur(8px)' : undefined,
           paddingTop: 'env(safe-area-inset-top)',
         }}
@@ -49,21 +117,73 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 md:h-20">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#0032A0] to-[#0053d6] rounded-lg flex items-center justify-center">
+              <div 
+                className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.primaryColor}DD)` }}
+              >
                 <HeartIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
-              <span className={`text-xl md:text-2xl font-bold ${isScrolled ? 'text-white' : 'text-[#0032A0]'}`}>ZamboVet</span>
+              <span 
+                className={`text-xl md:text-2xl font-bold ${isScrolled ? 'text-white' : ''}`}
+                style={{ color: isScrolled ? 'white' : settings.primaryColor }}
+              >
+                {settings.companyName}
+              </span>
             </div>
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8">
-              <button onClick={() => scrollToSection('home')} className={`font-medium transition-colors ${isScrolled ? 'text-white hover:text-[#b3c7e6]' : 'text-[#0032A0] hover:text-[#0053d6]'}`}>Home</button>
-              <button onClick={() => scrollToSection('services')} className={`font-medium transition-colors ${isScrolled ? 'text-white hover:text-[#b3c7e6]' : 'text-[#0032A0] hover:text-[#0053d6]'}`}>Services</button>
-              <button onClick={() => scrollToSection('about')} className={`font-medium transition-colors ${isScrolled ? 'text-white hover:text-[#b3c7e6]' : 'text-[#0032A0] hover:text-[#0053d6]'}`}>About</button>
-              <button onClick={() => scrollToSection('contact')} className={`font-medium transition-colors ${isScrolled ? 'text-white hover:text-[#b3c7e6]' : 'text-[#0032A0] hover:text-[#0053d6]'}`}>Contact</button>
+              <button 
+                onClick={() => scrollToSection('home')} 
+                className="font-medium transition-colors"
+                style={{ 
+                  color: isScrolled ? 'white' : settings.primaryColor,
+                }}
+                onMouseEnter={(e) => e.target.style.color = isScrolled ? settings.secondaryColor : settings.primaryColor + 'DD'}
+                onMouseLeave={(e) => e.target.style.color = isScrolled ? 'white' : settings.primaryColor}
+              >
+                Home
+              </button>
+              <button 
+                onClick={() => scrollToSection('services')} 
+                className="font-medium transition-colors"
+                style={{ 
+                  color: isScrolled ? 'white' : settings.primaryColor,
+                }}
+                onMouseEnter={(e) => e.target.style.color = isScrolled ? settings.secondaryColor : settings.primaryColor + 'DD'}
+                onMouseLeave={(e) => e.target.style.color = isScrolled ? 'white' : settings.primaryColor}
+              >
+                Services
+              </button>
+              <button 
+                onClick={() => scrollToSection('about')} 
+                className="font-medium transition-colors"
+                style={{ 
+                  color: isScrolled ? 'white' : settings.primaryColor,
+                }}
+                onMouseEnter={(e) => e.target.style.color = isScrolled ? settings.secondaryColor : settings.primaryColor + 'DD'}
+                onMouseLeave={(e) => e.target.style.color = isScrolled ? 'white' : settings.primaryColor}
+              >
+                About
+              </button>
+              <button 
+                onClick={() => scrollToSection('contact')} 
+                className="font-medium transition-colors"
+                style={{ 
+                  color: isScrolled ? 'white' : settings.primaryColor,
+                }}
+                onMouseEnter={(e) => e.target.style.color = isScrolled ? settings.secondaryColor : settings.primaryColor + 'DD'}
+                onMouseLeave={(e) => e.target.style.color = isScrolled ? 'white' : settings.primaryColor}
+              >
+                Contact
+              </button>
               <button 
                 onClick={handleBookAppointment}
-                className={`px-6 py-2 rounded-full font-medium transform hover:scale-105 transition-all duration-200 ${isScrolled ? 'bg-white text-[#0032A0] hover:bg-[#b3c7e6] hover:text-[#0032A0]' : 'bg-[#0032A0] text-white hover:bg-[#0053d6] hover:text-white'}`}
+                className="px-6 py-2 rounded-full font-medium transform hover:scale-105 transition-all duration-200"
+                style={{
+                  backgroundColor: isScrolled ? 'white' : settings.primaryColor,
+                  color: isScrolled ? settings.primaryColor : 'white'
+                }}
               >
                 Sign In
               </button>
@@ -133,29 +253,50 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section id="home" className="pt-16 md:pt-20 min-h-screen flex items-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#b3c7e6] via-white to-[#0032A0] opacity-80"></div>
+        <div 
+          className="absolute inset-0 opacity-80"
+          style={{ 
+            background: `linear-gradient(135deg, ${settings.secondaryColor}, white, ${settings.primaryColor})` 
+          }}
+        ></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="text-center lg:text-left space-y-6 md:space-y-8">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#0032A0] leading-tight">
-                Professional
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0032A0] to-[#0053d6]">
-                  Pet Care
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+                <span style={{ color: settings.primaryColor }}>
+                  {settings.heroTitle}
                 </span>
-                Made Simple
               </h1>
               <p className="text-lg md:text-xl text-black max-w-2xl mx-auto lg:mx-0">
-                Book veterinary appointments online, manage your pet's health records, and connect with experienced veterinarians who care about your furry family members.
+                {settings.heroSubtitle}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button 
                   onClick={handleBookAppointment}
-                  className="bg-[#0032A0] text-white px-8 py-4 rounded-full hover:bg-[#0053d6] hover:text-white transition-all duration-200 font-semibold text-lg"
+                  className="px-8 py-4 rounded-full transition-all duration-200 font-semibold text-lg text-white"
+                  style={{ backgroundColor: settings.primaryColor }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = settings.primaryColor + 'DD'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = settings.primaryColor}
                 >
-                  Book Appointment
+                  {settings.heroButtonText}
                 </button>
-                <button onClick={() => scrollToSection('services')} className="border-2 border-[#0032A0] text-[#0032A0] px-8 py-4 rounded-full hover:bg-[#b3c7e6] hover:text-[#0032A0] transition-all duration-200 font-semibold text-lg">
-                  Learn More
+                <button 
+                  onClick={() => scrollToSection('services')} 
+                  className="border-2 px-8 py-4 rounded-full transition-all duration-200 font-semibold text-lg"
+                  style={{ 
+                    borderColor: settings.primaryColor, 
+                    color: settings.primaryColor 
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = settings.secondaryColor;
+                    e.target.style.color = settings.primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                    e.target.style.color = settings.primaryColor;
+                  }}
+                >
+                  {settings.heroLearnMoreText}
                 </button>
               </div>
             </div>
@@ -163,15 +304,18 @@ export default function LandingPage() {
               <div className="animate-float">
                 <div className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300">
                   <div className="text-center space-y-4">
-                    <div className="w-20 h-20 bg-gradient-to-br from-[#0032A0] to-[#0053d6] rounded-full flex items-center justify-center mx-auto">
+                    <div 
+                      className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
+                      style={{ background: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.primaryColor}DD)` }}
+                    >
                       <HeartIcon className="w-10 h-10 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-[#0032A0]">24/7 Pet Care</h3>
+                    <h3 className="text-xl font-bold" style={{ color: settings.primaryColor }}>24/7 Pet Care</h3>
                     <p className="text-black">Professional veterinary services available</p>
                     <div className="flex justify-center space-x-2">
-                      <div className="w-3 h-3 bg-[#0032A0] rounded-full animate-pulse"></div>
-                      <div className="w-3 h-3 bg-[#0053d6] rounded-full animate-pulse delay-100"></div>
-                      <div className="w-3 h-3 bg-[#0032A0] rounded-full animate-pulse delay-200"></div>
+                      <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: settings.primaryColor }}></div>
+                      <div className="w-3 h-3 rounded-full animate-pulse delay-100" style={{ backgroundColor: settings.primaryColor + 'DD' }}></div>
+                      <div className="w-3 h-3 rounded-full animate-pulse delay-200" style={{ backgroundColor: settings.primaryColor }}></div>
                     </div>
                   </div>
                 </div>
@@ -179,20 +323,20 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <ChevronDownIcon className="w-8 h-8 text-[#0032A0]" />
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <ChevronDownIcon className="w-8 h-8" style={{ color: settings.primaryColor }} />
         </div>
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-16 md:py-24 bg-[#b3c7e6]">
+      <section id="services" className="py-16 md:py-24" style={{ backgroundColor: settings.secondaryColor }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#0032A0] mb-4">
-              Our Services
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4" style={{ color: settings.primaryColor }}>
+              {settings.servicesTitle}
             </h2>
             <p className="text-lg md:text-xl text-black max-w-3xl mx-auto">
-              Comprehensive veterinary care tailored to your pet's unique needs
+              {settings.servicesSubtitle}
             </p>
           </div>
 
@@ -202,35 +346,39 @@ export default function LandingPage() {
                 icon: CalendarDaysIcon,
                 title: "Online Booking",
                 description: "Schedule appointments 24/7 through our easy-to-use platform",
-                color: "from-[#0032A0] to-[#0053d6]"
+                gradient: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.primaryColor}DD)`
               },
               {
                 icon: HeartIcon,
                 title: "Health Monitoring",
                 description: "Track your pet's health records and vaccination schedules",
-                color: "from-white to-[#0032A0]"
+                gradient: `linear-gradient(135deg, white, ${settings.primaryColor})`
               },
               {
                 icon: UserGroupIcon,
                 title: "Expert Veterinarians",
                 description: "Experienced professionals dedicated to your pet's wellbeing",
-                color: "from-[#b3c7e6] to-[#0032A0]"
+                gradient: `linear-gradient(135deg, ${settings.secondaryColor}, ${settings.primaryColor})`
               },
               {
                 icon: ShieldCheckIcon,
                 title: "Preventive Care",
                 description: "Preventive health services to keep your pets healthy and happy",
-                color: "from-white to-[#b3c7e6]"
+                gradient: `linear-gradient(135deg, white, ${settings.secondaryColor})`
               }
             ].map((service, index) => (
               <div
                 key={index}
-                className="group bg-white rounded-2xl p-6 md:p-8 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 border border-[#b3c7e6]"
+                className="group bg-white rounded-2xl p-6 md:p-8 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 border"
+                style={{ borderColor: settings.secondaryColor }}
               >
-                <div className={`w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r ${service.color} rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                <div 
+                  className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                  style={{ background: service.gradient }}
+                >
                   <service.icon className="w-7 h-7 md:w-8 md:h-8 text-white" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-[#0032A0] mb-3">
+                <h3 className="text-xl md:text-2xl font-bold mb-3" style={{ color: settings.primaryColor }}>
                   {service.title}
                 </h3>
                 <p className="text-black leading-relaxed">
@@ -243,18 +391,21 @@ export default function LandingPage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-16 md:py-24 bg-gradient-to-br from-[#b3c7e6] via-white to-[#0032A0]">
+      <section 
+        id="about" 
+        className="py-16 md:py-24"
+        style={{ 
+          background: `linear-gradient(135deg, ${settings.secondaryColor}, white, ${settings.primaryColor})` 
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-6 md:space-y-8">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#0032A0]">
-                Why Choose
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0032A0] to-[#0053d6]">
-                  ZamboVet?
-                </span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold" style={{ color: settings.primaryColor }}>
+                {settings.aboutTitle}
               </h2>
               <p className="text-lg md:text-xl text-black leading-relaxed">
-                We combine modern technology with compassionate care to provide the best possible experience for you and your pets. Our platform makes veterinary care accessible, convenient, and stress-free.
+                {settings.aboutSubtitle}
               </p>
               <div className="space-y-4">
                 {[
@@ -400,14 +551,14 @@ export default function LandingPage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-16 md:py-24 bg-[#fffbde]">
+      <section id="contact" className="py-16 md:py-24" style={{ backgroundColor: settings.accentColor }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#0032A0] mb-4">
-              Get In Touch
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4" style={{ color: settings.primaryColor }}>
+              {settings.contactTitle}
             </h2>
             <p className="text-lg md:text-xl text-black max-w-3xl mx-auto">
-              Have questions? We're here to help. Reach out to us anytime.
+              {settings.contactSubtitle}
             </p>
           </div>
 
@@ -419,29 +570,32 @@ export default function LandingPage() {
                   {
                     icon: PhoneIcon,
                     title: "Phone",
-                    info: "+639123456789",
+                    info: settings.contactPhone,
                     subInfo: "Available 24/7 for emergencies"
                   },
                   {
                     icon: EnvelopeIcon,
                     title: "Email",
-                    info: "vetzambo@gmail.com",
+                    info: settings.contactEmail,
                     subInfo: "We'll respond within 24 hours"
                   },
                   {
                     icon: MapPinIcon,
                     title: "Location",
-                    info: "Lorem Ipsum",
-                    subInfo: "Zamboanga City"
+                    info: settings.contactAddress.split(',')[0] || 'Lorem Ipsum',
+                    subInfo: settings.contactAddress.split(',')[1] || 'Zamboanga City'
                   }
                 ].map((contact, index) => (
                   <div key={index} className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-[#0032A0] to-[#0053d6] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.primaryColor}DD)` }}
+                    >
                       <contact.icon className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-[#0032A0] mb-1">{contact.title}</h3>
-                      <p className="text-[#0053d6] font-medium">{contact.info}</p>
+                      <h3 className="text-xl font-semibold mb-1" style={{ color: settings.primaryColor }}>{contact.title}</h3>
+                      <p className="font-medium" style={{ color: settings.primaryColor + 'DD' }}>{contact.info}</p>
                       <p className="text-black text-sm">{contact.subInfo}</p>
                     </div>
                   </div>
@@ -542,15 +696,18 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0032A0] text-white py-12 md:py-16">
+      <footer className="text-white py-12 md:py-16" style={{ backgroundColor: settings.primaryColor }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#0032A0] to-[#0053d6] rounded-lg flex items-center justify-center">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.primaryColor}DD)` }}
+                >
                   <HeartIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold text-white">ZamboVet</span>
+                <span className="text-2xl font-bold text-white">{settings.companyName}</span>
               </div>
               <p className="text-white mb-6 max-w-md">
                 Professional veterinary care made simple. We're dedicated to keeping your pets healthy and happy with modern technology and compassionate service.
@@ -644,8 +801,8 @@ export default function LandingPage() {
 
           <div className="border-t border-[#91c8e4] mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <div className="text-[#b3c7e6] text-sm">
-                © 2025 ZamboVet. All rights reserved.
+              <div className="text-sm" style={{ color: settings.secondaryColor }}>
+                © 2025 {settings.companyName}. All rights reserved.
               </div>
               <div className="flex space-x-6 text-sm">
                 <a href="#" className="text-[#91c8e4] hover:text-[#fffbde] transition-colors duration-200">

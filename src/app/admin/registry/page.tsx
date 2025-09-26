@@ -97,6 +97,13 @@ export default function AdminVeterinarianRegistry() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'unavailable'>('all');
+
+  // Pagination state
+  const PAGE_SIZE = 10;
+  const [applicationsPage, setApplicationsPage] = useState(1);
+  const [activeVetsPage, setActiveVetsPage] = useState(1);
+  const [totalApplications, setTotalApplications] = useState(0);
+  const [totalActiveVets, setTotalActiveVets] = useState(0);
   
   // Modal state
   const [selectedApplication, setSelectedApplication] = useState<VeterinarianApplication | null>(null);
@@ -129,21 +136,65 @@ export default function AdminVeterinarianRegistry() {
     }
   }, [activeTab]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setApplicationsPage(1);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setActiveVetsPage(1);
+  }, [searchTerm, availabilityFilter]);
+
+  // Refetch data when page or filters change
+  useEffect(() => {
+    if (activeTab === 'applications') {
+      fetchApplications();
+    }
+  }, [applicationsPage, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'active') {
+      fetchActiveVeterinarians();
+    }
+  }, [activeVetsPage, searchTerm, availabilityFilter]);
+
   const fetchApplications = async () => {
     try {
       setApplicationsLoading(true);
       
-      const { data, error } = await supabase
+      const offset = (applicationsPage - 1) * PAGE_SIZE;
+      let dataQuery = supabase
         .from('veterinarian_applications')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+      let countQuery = supabase
+        .from('veterinarian_applications')
+        .select('*', { count: 'exact', head: true });
+      
+      // Apply search filter
+      if (searchTerm.trim()) {
+        const searchFilter = `full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,specialization.ilike.%${searchTerm}%`;
+        dataQuery = dataQuery.or(searchFilter);
+        countQuery = countQuery.or(searchFilter);
+      }
+      
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        dataQuery = dataQuery.eq('status', statusFilter);
+        countQuery = countQuery.eq('status', statusFilter);
+      }
+      
+      const [{ data, error: dataError }, { count, error: countError }] = await Promise.all([
+        dataQuery.order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1),
+        countQuery
+      ]);
 
-      if (error) {
-        console.error('Error fetching applications:', error);
+      if (dataError || countError) {
+        console.error('Error fetching applications:', dataError || countError);
         return;
       }
 
       setApplications(data || []);
+      setTotalApplications(count || 0);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -155,21 +206,43 @@ export default function AdminVeterinarianRegistry() {
     try {
       setActiveVetsLoading(true);
       
-      const { data, error } = await supabase
+      const offset = (activeVetsPage - 1) * PAGE_SIZE;
+      let dataQuery = supabase
         .from('veterinarians')
         .select(`
           *,
           profiles!inner(email, phone, is_active),
           clinics(name, address, phone)
-        `)
-        .order('created_at', { ascending: false });
+        `);
+      let countQuery = supabase
+        .from('veterinarians')
+        .select('*', { count: 'exact', head: true });
+      
+      // Apply search filter
+      if (searchTerm.trim()) {
+        const searchFilter = `full_name.ilike.%${searchTerm}%,specialization.ilike.%${searchTerm}%`;
+        dataQuery = dataQuery.or(searchFilter);
+        countQuery = countQuery.or(searchFilter);
+      }
+      
+      // Apply availability filter
+      if (availabilityFilter !== 'all') {
+        dataQuery = dataQuery.eq('is_available', availabilityFilter === 'available');
+        countQuery = countQuery.eq('is_available', availabilityFilter === 'available');
+      }
+      
+      const [{ data, error: dataError }, { count, error: countError }] = await Promise.all([
+        dataQuery.order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1),
+        countQuery
+      ]);
 
-      if (error) {
-        console.error('Error fetching active veterinarians:', error);
+      if (dataError || countError) {
+        console.error('Error fetching active veterinarians:', dataError || countError);
         return;
       }
 
       setActiveVets(data || []);
+      setTotalActiveVets(count || 0);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -404,24 +477,9 @@ export default function AdminVeterinarianRegistry() {
     }
   };
 
-  // Filter data
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.license_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const filteredActiveVets = activeVets.filter(vet => {
-    const matchesSearch = vet.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vet.profiles.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vet.license_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAvailability = availabilityFilter === 'all' || 
-      (availabilityFilter === 'available' && vet.is_available) ||
-      (availabilityFilter === 'unavailable' && !vet.is_available);
-    return matchesSearch && matchesAvailability;
-  });
+  // Use applications and activeVets directly since filtering is now done server-side
+  const filteredApplications = applications;
+  const filteredActiveVets = activeVets;
 
   const applicationStats = {
     total: applications.length,
@@ -468,7 +526,7 @@ export default function AdminVeterinarianRegistry() {
                   { id: "clinics", name: "Clinic Management", icon: BuildingOffice2Icon, desc: 'Clinic listings', href: '/admin' },
                   { id: "appointments", name: "Appointment System", icon: CalendarIcon, desc: 'Booking system', href: '/admin' },
                   { id: "veterinarians", name: "Veterinarian Registry", icon: AcademicCapIcon, desc: 'Medical professionals', href: '/admin/registry', active: true },
-                  { id: "analytics", name: "System Analytics", icon: ChartBarIcon, desc: 'Reports & insights', href: "/admin/analytics" },
+                  { id: "analytics", name: "System Analytics", icon: ChartBarIcon, desc: 'Reports & insights', href: "/admin" },
                   { id: "activity", name: 'Recent Activity', icon: ClockIcon, desc: "Activity logs", href: '/admin' },
                   { id: "services", name: "Service Management", icon: DocumentTextIcon, desc: 'Service config', href: '/admin' }
                 ].map((item) => (
@@ -568,7 +626,7 @@ export default function AdminVeterinarianRegistry() {
                   { id: "clinics", name: "Clinic Management", icon: BuildingOffice2Icon, href: '/admin' },
                   { id: "appointments", name: "Appointment System", icon: CalendarIcon, href: '/admin' },
                   { id: "veterinarians", name: "Veterinarian Registry", icon: AcademicCapIcon, href: '/admin/registry', active: true },
-                  { id: "analytics", name: "System Analytics", icon: ChartBarIcon, href: "/admin/analytics" },
+                  { id: "analytics", name: "System Analytics", icon: ChartBarIcon, href: "/admin" },
                   { id: "activity", name: 'Recent Activity', icon: ClockIcon, href: '/admin' },
                   { id: "services", name: "Service Management", icon: DocumentTextIcon, href: '/admin' }
                 ].map((item) => (
@@ -814,67 +872,92 @@ export default function AdminVeterinarianRegistry() {
                         <p className="mt-1 text-sm text-gray-500">No veterinarian applications match your search criteria.</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veterinarian</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredApplications.map((app) => (
-                              <tr key={app.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10">
-                                      <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                        <UserIcon className="h-6 w-6 text-gray-600" />
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veterinarian</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {filteredApplications.map((app) => (
+                                <tr key={app.id} className="hover:bg-gray-50">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-10 w-10">
+                                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                          <UserIcon className="h-6 w-6 text-gray-600" />
+                                        </div>
+                                      </div>
+                                      <div className="ml-4">
+                                        <div className="text-sm font-medium text-gray-900">{app.full_name}</div>
+                                        <div className="text-sm text-gray-500">{app.email}</div>
+                                        <div className="text-sm text-gray-500">{app.specialization || 'General Practice'}</div>
                                       </div>
                                     </div>
-                                    <div className="ml-4">
-                                      <div className="text-sm font-medium text-gray-900">{app.full_name}</div>
-                                      <div className="text-sm text-gray-500">{app.email}</div>
-                                      <div className="text-sm text-gray-500">{app.specialization || 'General Practice'}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {app.license_number}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {app.years_experience} years
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
-                                    {getStatusIcon(app.status)}
-                                    <span className="ml-1 capitalize">{app.status}</span>
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(app.created_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedApplication(app);
-                                      setShowApplicationModal(true);
-                                      setRemarks('');
-                                    }}
-                                    className="text-blue-600 hover:text-blue-900 mr-4"
-                                  >
-                                    <EyeIcon className="h-4 w-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {app.license_number}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {app.years_experience} years
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
+                                      {getStatusIcon(app.status)}
+                                      <span className="ml-1 capitalize">{app.status}</span>
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {new Date(app.created_at).toLocaleDateString()}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedApplication(app);
+                                        setShowApplicationModal(true);
+                                        setRemarks('');
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900 mr-4"
+                                    >
+                                      <EyeIcon className="h-4 w-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {totalApplications > PAGE_SIZE && (
+                          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-t border-gray-200">
+                            <div className="text-sm text-gray-600">
+                              Page {applicationsPage} of {Math.max(1, Math.ceil(totalApplications / PAGE_SIZE))}
+                            </div>
+                            <div className="space-x-2">
+                              <button
+                                className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                                disabled={applicationsPage <= 1}
+                                onClick={() => setApplicationsPage(p => Math.max(1, p - 1))}
+                              >
+                                Previous
+                              </button>
+                              <button
+                                className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                                disabled={applicationsPage >= Math.ceil(totalApplications / PAGE_SIZE)}
+                                onClick={() => setApplicationsPage(p => p + 1)}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -996,86 +1079,111 @@ export default function AdminVeterinarianRegistry() {
                         <p className="mt-1 text-sm text-gray-500">No active veterinarians match your search criteria.</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veterinarian</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredActiveVets.map((vet) => (
-                              <tr key={vet.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10">
-                                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <AcademicCapIcon className="h-6 w-6 text-blue-600" />
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veterinarian</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {filteredActiveVets.map((vet) => (
+                                <tr key={vet.id} className="hover:bg-gray-50">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-10 w-10">
+                                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                          <AcademicCapIcon className="h-6 w-6 text-blue-600" />
+                                        </div>
+                                      </div>
+                                      <div className="ml-4">
+                                        <div className="text-sm font-medium text-gray-900">Dr. {vet.full_name}</div>
+                                        <div className="text-sm text-gray-500">{vet.profiles.email}</div>
+                                        <div className="text-sm text-gray-500">{vet.specialization || 'General Practice'}</div>
                                       </div>
                                     </div>
-                                    <div className="ml-4">
-                                      <div className="text-sm font-medium text-gray-900">Dr. {vet.full_name}</div>
-                                      <div className="text-sm text-gray-500">{vet.profiles.email}</div>
-                                      <div className="text-sm text-gray-500">{vet.specialization || 'General Practice'}</div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {vet.license_number}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {vet.years_experience} years
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    ₱{vet.consultation_fee}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    ⭐ {vet.average_rating}/5.0
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex flex-col space-y-1">
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        vet.is_available ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'
+                                      }`}>
+                                        {vet.is_available ? 'Available' : 'Unavailable'}
+                                      </span>
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        vet.profiles.is_active ? 'text-blue-800 bg-blue-100' : 'text-gray-800 bg-gray-100'
+                                      }`}>
+                                        {vet.profiles.is_active ? 'Active' : 'Inactive'}
+                                      </span>
                                     </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {vet.license_number}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {vet.years_experience} years
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  ₱{vet.consultation_fee}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  ⭐ {vet.average_rating}/5.0
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex flex-col space-y-1">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      vet.is_available ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'
-                                    }`}>
-                                      {vet.is_available ? 'Available' : 'Unavailable'}
-                                    </span>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      vet.profiles.is_active ? 'text-blue-800 bg-blue-100' : 'text-gray-800 bg-gray-100'
-                                    }`}>
-                                      {vet.profiles.is_active ? 'Active' : 'Inactive'}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedVet(vet);
-                                      setShowVetModal(true);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-900 mr-2"
-                                  >
-                                    <EyeIcon className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleToggleVetAvailability(vet.id, !vet.is_available)}
-                                    className={`${
-                                      vet.is_available ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'
-                                    }`}
-                                  >
-                                    {vet.is_available ? '🚫' : '✅'}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedVet(vet);
+                                        setShowVetModal(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900 mr-2"
+                                    >
+                                      <EyeIcon className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleToggleVetAvailability(vet.id, !vet.is_available)}
+                                      className={`${
+                                        vet.is_available ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'
+                                      }`}
+                                    >
+                                      {vet.is_available ? '🚫' : '✅'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {totalActiveVets > PAGE_SIZE && (
+                          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-t border-gray-200">
+                            <div className="text-sm text-gray-600">
+                              Page {activeVetsPage} of {Math.max(1, Math.ceil(totalActiveVets / PAGE_SIZE))}
+                            </div>
+                            <div className="space-x-2">
+                              <button
+                                className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                                disabled={activeVetsPage <= 1}
+                                onClick={() => setActiveVetsPage(p => Math.max(1, p - 1))}
+                              >
+                                Previous
+                              </button>
+                              <button
+                                className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                                disabled={activeVetsPage >= Math.ceil(totalActiveVets / PAGE_SIZE)}
+                                onClick={() => setActiveVetsPage(p => p + 1)}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

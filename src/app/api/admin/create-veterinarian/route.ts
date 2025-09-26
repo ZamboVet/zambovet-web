@@ -87,17 +87,13 @@ export async function POST(request: NextRequest) {
       email,
       full_name,
       password,
-      specialization,
       license_number,
-      years_experience,
-      consultation_fee,
       clinic_id
     } = body;
 
     // Input sanitization and validation
     const sanitizedEmail = email?.toLowerCase().trim();
     const sanitizedFullName = full_name?.trim();
-    const sanitizedSpecialization = specialization?.trim();
     const sanitizedLicenseNumber = license_number?.trim();
     
     // Validate required fields
@@ -125,9 +121,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate numeric fields
-    const numericYearsExperience = Math.max(0, parseInt(years_experience?.toString() || '0'));
-    const numericConsultationFee = Math.max(0, parseFloat(consultation_fee?.toString() || '0'));
+    // Validate clinic_id
     const numericClinicId = clinic_id ? parseInt(clinic_id.toString()) : null;
 
     console.log('Starting user creation process...');
@@ -192,10 +186,7 @@ export async function POST(request: NextRequest) {
           user_id: authData.user.id,
           clinic_id: numericClinicId,
           full_name: sanitizedFullName,
-          specialization: sanitizedSpecialization || null,
           license_number: sanitizedLicenseNumber || null,
-          years_experience: numericYearsExperience,
-          consultation_fee: numericConsultationFee,
           is_available: true,
           average_rating: 0.00
         });
