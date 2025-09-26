@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-server';
 import { 
   isValidOTPFormat, 
   isOTPExpired, 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get OTP record from database
-    const { data: otpRecord, error: fetchError } = await supabase
+    const { data: otpRecord, error: fetchError } = await supabaseAdmin
       .from('otp_verification')
       .select('*')
       .eq('email', email)
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Check if OTP has expired
     if (isOTPExpired(new Date(otpRecord.expires_at))) {
       // Clean up expired OTP
-      await supabase
+      await supabaseAdmin
         .from('otp_verification')
         .delete()
         .eq('id', otpRecord.id);
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Check attempt limit
     if (otpRecord.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
       // Clean up OTP after max attempts
-      await supabase
+      await supabaseAdmin
         .from('otp_verification')
         .delete()
         .eq('id', otpRecord.id);
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Verify OTP code
     if (otpRecord.otp_code !== sanitizedOTP) {
       // Increment attempt count
-      await supabase
+      await supabaseAdmin
         .from('otp_verification')
         .update({ attempts: otpRecord.attempts + 1 })
         .eq('id', otpRecord.id);
@@ -99,14 +99,13 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create Supabase user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
         password: userData.password,
-        options: {
-          data: {
-            full_name: userData.fullName,
-            user_role: userData.userRole || 'pet_owner',
-          }
+        email_confirm: true,
+        user_metadata: {
+          full_name: userData.fullName,
+          user_role: userData.userRole || 'pet_owner',
         }
       });
 
@@ -126,7 +125,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create profile record
-      const { error: profileError } = await supabase
+      const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .upsert({
           id: authData.user.id,
@@ -149,7 +148,7 @@ export async function POST(request: NextRequest) {
 
       // Create pet owner profile (only for pet owners)
       if (userData.userRole === 'pet_owner' || !userData.userRole) {
-        const { data: existingProfile } = await supabase
+        const { data: existingProfile } = await supabaseAdmin
           .from('pet_owner_profiles')
           .select('id')
           .eq('user_id', authData.user.id)
@@ -157,7 +156,7 @@ export async function POST(request: NextRequest) {
 
         let petOwnerError;
         if (existingProfile) {
-          const { error } = await supabase
+          const { error } = await supabaseAdmin
             .from('pet_owner_profiles')
             .update({
               full_name: userData.fullName,
@@ -169,7 +168,7 @@ export async function POST(request: NextRequest) {
             .eq('user_id', authData.user.id);
           petOwnerError = error;
         } else {
-          const { error } = await supabase
+          const { error } = await supabaseAdmin
             .from('pet_owner_profiles')
             .insert({
               user_id: authData.user.id,
@@ -192,7 +191,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Mark OTP as verified and clean up
-      await supabase
+      await supabaseAdmin
         .from('otp_verification')
         .update({ is_verified: true })
         .eq('id', otpRecord.id);
