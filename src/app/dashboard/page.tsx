@@ -1840,28 +1840,26 @@ export default function PetOwnerDashboard() {
                               </div>
                             )}
                             
-                            {/* Quick Actions Bar - Mobile Optimized */}
+                            {/* Quick Actions Bar - Always Visible with Mobile Optimization */}
                             <div className="mt-6 pt-4 border-t border-gray-100">
-                              {/* Mobile: Stack buttons vertically */}
-                              <div className="block sm:hidden">
-                                <span className="text-gray-500 font-medium text-sm mb-3 block">Quick Actions</span>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <button className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-xs touch-manipulation">
-                                    Quick Actions
-                                  </button>
-                                  <button className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-xs touch-manipulation">
-                                    Health Record
-                                  </button>
-                                  <button className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium text-xs touch-manipulation">
-                                    Book Visit
-                                  </button>
-                                </div>
+                              <span className="text-gray-500 font-medium text-sm mb-3 block">Quick Actions</span>
+                              
+                              {/* Mobile-first approach: Always show grid on small screens */}
+                              <div className="grid grid-cols-3 gap-2 md:hidden">
+                                <button className="px-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-xs touch-manipulation min-h-[36px] flex items-center justify-center">
+                                  Quick Actions
+                                </button>
+                                <button className="px-2 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-xs touch-manipulation min-h-[36px] flex items-center justify-center">
+                                  Health Record
+                                </button>
+                                <button className="px-2 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium text-xs touch-manipulation min-h-[36px] flex items-center justify-center">
+                                  Book Visit
+                                </button>
                               </div>
                               
                               {/* Desktop: Horizontal layout */}
-                              <div className="hidden sm:flex items-center justify-between text-sm">
-                                <span className="text-gray-500 font-medium">Quick Actions</span>
-                                <div className="flex space-x-2">
+                              <div className="hidden md:flex items-center justify-between text-sm">
+                                <div className="flex space-x-2 ml-auto">
                                   <button className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium">
                                     Health Record
                                   </button>
