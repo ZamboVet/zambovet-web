@@ -97,7 +97,9 @@ export default function AuthDebugPage() {
       } else {
         alert('Login successful!');
         // Refresh the page to update auth state
-        window.location.reload();
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
       }
     } catch (error) {
       alert('Login error: ' + error.message);
@@ -191,10 +193,10 @@ export default function AuthDebugPage() {
           <div className="p-4 bg-gray-50 rounded-lg">
             <h2 className="font-semibold text-gray-900 mb-3">Browser Environment</h2>
             <div className="text-sm space-y-1">
-              <div><span className="font-medium">User Agent:</span> {navigator.userAgent}</div>
-              <div><span className="font-medium">Cookies Enabled:</span> {navigator.cookieEnabled ? 'Yes' : 'No'}</div>
-              <div><span className="font-medium">Local Storage:</span> {typeof(Storage) !== "undefined" ? 'Available' : 'Not Available'}</div>
-              <div><span className="font-medium">Current URL:</span> {window.location.href}</div>
+              <div><span className="font-medium">User Agent:</span> {typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A (Server-side)'}</div>
+              <div><span className="font-medium">Cookies Enabled:</span> {typeof navigator !== 'undefined' ? (navigator.cookieEnabled ? 'Yes' : 'No') : 'N/A (Server-side)'}</div>
+              <div><span className="font-medium">Local Storage:</span> {typeof Storage !== "undefined" ? 'Available' : 'Not Available'}</div>
+              <div><span className="font-medium">Current URL:</span> {typeof window !== 'undefined' ? window.location.href : 'N/A (Server-side)'}</div>
             </div>
           </div>
 
