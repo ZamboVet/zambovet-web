@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   CogIcon,
   MoonIcon,
@@ -20,6 +21,7 @@ interface UserSettingsPanelProps {
 
 export default function UserSettingsPanel({ onClose, isModal = false }: UserSettingsPanelProps) {
   const { settings, updateSetting, resetSettings, formatTime } = useSettings();
+  const { t, availableLanguages } = useLanguage();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -54,8 +56,8 @@ export default function UserSettingsPanel({ onClose, isModal = false }: UserSett
             <CogIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Customize your experience</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settings.title')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.description')}</p>
           </div>
         </div>
         {isModal && onClose && (
@@ -91,8 +93,8 @@ export default function UserSettingsPanel({ onClose, isModal = false }: UserSett
               )}
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Dark Mode</h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Switch between light and dark themes</p>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.darkMode')}</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('settings.darkModeDesc')}</p>
             </div>
           </div>
           <button
@@ -191,9 +193,11 @@ export default function UserSettingsPanel({ onClose, isModal = false }: UserSett
             onChange={(e) => handleSettingChange('language', e.target.value)}
             className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-3 py-1"
           >
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fil">Filipino</option>
+            {availableLanguages.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.nativeName}
+              </option>
+            ))}
           </select>
         </div>
       </div>

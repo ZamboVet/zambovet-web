@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { LanguageProvider } from './LanguageContext';
 
 interface UserSettings {
   darkMode: boolean;
@@ -56,14 +57,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Apply dark mode to document
   useEffect(() => {
-    if (mounted && typeof document !== 'undefined') {
+    if (typeof document !== 'undefined') {
+      const htmlElement = document.documentElement;
       if (settings.darkMode) {
-        document.documentElement.classList.add('dark');
+        htmlElement.classList.add('dark');
+        console.log('Dark mode enabled - added dark class');
       } else {
-        document.documentElement.classList.remove('dark');
+        htmlElement.classList.remove('dark');
+        console.log('Dark mode disabled - removed dark class');
       }
     }
-  }, [settings.darkMode, mounted]);
+  }, [settings.darkMode]);
 
   const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     setSettings(prev => ({
@@ -120,7 +124,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       formatDate,
       formatDateTime,
     }}>
-      {children}
+      <LanguageProvider language={settings.language}>
+        {children}
+      </LanguageProvider>
     </SettingsContext.Provider>
   );
 }

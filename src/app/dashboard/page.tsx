@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import FindClinics from '@/components/dashboard/FindClinics';
 import UserSettingsPanel from '@/components/settings/UserSettingsPanel';
@@ -109,6 +110,7 @@ interface AnalyticsData {
 export default function PetOwnerDashboard() {
   const { user, userProfile, signOut } = useAuth();
   const { settings, formatTime, formatDate, formatDateTime } = useSettings();
+  const { t } = useLanguage();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [petOwnerStats, setPetOwnerStats] = useState<PetOwnerStats>({
@@ -1463,13 +1465,13 @@ export default function PetOwnerDashboard() {
                     </div>
                     <div>
                       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
-                        Pet Care Dashboard 🐾
+                        {t('dashboard.welcome')}
                       </h1>
                       <p className="text-[#ffffff] mt-1 text-sm sm:text-base">
                         Welcome back, {petOwnerProfile?.full_name || userProfile?.full_name}
                       </p>
                       <p className="text-[#ffffff] text-xs sm:text-sm">
-                        Managing {petOwnerStats.totalPets} beloved {petOwnerStats.totalPets === 1 ? 'pet' : 'pets'}
+                        {t('dashboard.managing')} {petOwnerStats.totalPets} beloved {petOwnerStats.totalPets === 1 ? t('dashboard.pet') : t('dashboard.pets')}
                       </p>
                     </div>
                   </div>
@@ -1492,18 +1494,18 @@ export default function PetOwnerDashboard() {
           <div className="max-w-7xl mx-auto px-4 -mt-4">
             {/* Navigation Tabs */}
           {/* Moved navigation bar to bottom for mobile, keep at top for desktop */}
-            <div className="bg-white rounded-xl shadow-sm mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 border dark:border-gray-700">
             {/* Desktop Navigation (top) */}
-            <div className="border-b border-gray-200 hidden md:block">
+            <div className="border-b border-gray-200 dark:border-gray-700 hidden md:block">
                 <nav className="-mb-px flex overflow-x-auto scrollbar-hide px-3 sm:px-6">
                   {[
-                    { id: 'overview', name: 'Overview', icon: ChartBarIcon },
-                    { id: 'pets', name: 'My Pets', icon: HeartIcon },
-                    { id: 'appointments', name: 'Appointments', icon: CalendarDaysIcon },
-                    { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
-                    { id: 'clinics', name: 'Clinics', icon: BuildingOfficeIcon },
-                    { id: 'profile', name: 'Profile', icon: UserCircleIcon },
-                    { id: 'settings', name: 'Settings', icon: CogIcon }
+                    { id: 'overview', name: t('nav.overview'), icon: ChartBarIcon },
+                    { id: 'pets', name: t('nav.pets'), icon: HeartIcon },
+                    { id: 'appointments', name: t('nav.appointments'), icon: CalendarDaysIcon },
+                    { id: 'analytics', name: t('nav.analytics'), icon: ChartPieIcon },
+                    { id: 'clinics', name: t('nav.clinics'), icon: BuildingOfficeIcon },
+                    { id: 'profile', name: t('nav.profile'), icon: UserCircleIcon },
+                    { id: 'settings', name: t('nav.settings'), icon: CogIcon }
                   ].map((tab) => (
                     <button
                       type="button"
@@ -1511,8 +1513,8 @@ export default function PetOwnerDashboard() {
                       onClick={() => handleTabChange(tab.id)}
                       className={`group inline-flex items-center py-4 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                         activeTab === tab.id
-                        ? 'border-[#0032A0] text-[#0032A0]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-[#0032A0] text-[#0032A0] dark:text-blue-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       <tab.icon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
@@ -1524,7 +1526,7 @@ export default function PetOwnerDashboard() {
               </div>
             </div>
           {/* Mobile Navigation (bottom) */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
             <nav className="flex justify-around px-1 py-2">
               {[
                 { id: 'overview', name: 'Overview', icon: ChartBarIcon, shortName: 'Home' },
@@ -2332,15 +2334,15 @@ export default function PetOwnerDashboard() {
             {activeTab === 'analytics' && (
               <div className="space-y-6">
                 {/* Analytics Header */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                        <ChartBarIcon className="w-6 h-6 text-gray-600 mr-2" />
-                        Pet Care Analytics
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                        <ChartBarIcon className="w-6 h-6 text-gray-600 dark:text-gray-400 mr-2" />
+                        {t('analytics.title')}
                       </h2>
-                      <p className="text-gray-600 text-sm mt-1">
-                        Essential insights into your pet care patterns
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                        {t('analytics.description')}
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">
