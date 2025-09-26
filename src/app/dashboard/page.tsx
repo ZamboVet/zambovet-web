@@ -24,7 +24,8 @@ import {
   ChartBarIcon,
   BuildingOfficeIcon,
   ArrowRightOnRectangleIcon,
-  ChartPieIcon
+  ChartPieIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
 
 // Simple sanitization functions for client-side use
@@ -64,6 +65,7 @@ import TestModal from '@/components/appointments/TestModal';
 import AppointmentDetailsModal from '@/components/appointments/AppointmentDetailsModal';
 import PetDiary from '@/components/diary/PetDiary';
 import DiaryEntryModal from '@/components/diary/DiaryEntryModal';
+import ReviewSubmissionModal from '@/components/reviews/ReviewSubmissionModal';
 import {
   Line,
   AreaChart,
@@ -189,6 +191,10 @@ export default function PetOwnerDashboard() {
   
   // Pet Diary state
   const [diaryRefreshTrigger, setDiaryRefreshTrigger] = useState(0);
+  
+  // Review submission state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedAppointmentForReview, setSelectedAppointmentForReview] = useState<any>(null);
 
   // Dynamic species and breeds state
   const [availableSpecies, setAvailableSpecies] = useState<string[]>(getBaseSpecies());
@@ -1362,6 +1368,22 @@ export default function PetOwnerDashboard() {
     }
   };
 
+  const handleLeaveReview = (appointment: any) => {
+    console.log('Opening review modal for appointment:', appointment.id);
+    setSelectedAppointmentForReview(appointment);
+    setShowReviewModal(true);
+  };
+
+  const handleReviewSubmitted = () => {
+    console.log('Review submitted successfully');
+    setShowReviewModal(false);
+    setSelectedAppointmentForReview(null);
+    // Refresh appointments to show updated review status
+    if (activeTab === 'appointments') {
+      fetchTabData('appointments');
+    }
+  };
+
   const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center">
@@ -2043,6 +2065,19 @@ export default function PetOwnerDashboard() {
                                   Cancel
                                 </button>
                               )}
+                              {appointment.status === 'completed' && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    console.log('Leave review clicked for appointment:', appointment.id);
+                                    handleLeaveReview(appointment);
+                                  }}
+                                  className="flex-1 text-yellow-600 hover:text-yellow-900 text-sm font-medium"
+                                >
+                                  Leave Review
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -2183,9 +2218,24 @@ export default function PetOwnerDashboard() {
                                       </button>
                                     )}
                                     {appointment.status === 'completed' && (
-                                      <button className="text-amber-600 hover:text-amber-900" title="View Report">
-                                        <DocumentTextIcon className="w-4 h-4" />
-                                      </button>
+                                      <>
+                                        <button className="text-amber-600 hover:text-amber-900" title="View Report">
+                                          <DocumentTextIcon className="w-4 h-4" />
+                                        </button>
+                                        {/* Leave Review Button for completed appointments */}
+                                        <button 
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log('Leave review clicked for appointment:', appointment.id);
+                                            handleLeaveReview(appointment);
+                                          }}
+                                          className="text-yellow-600 hover:text-yellow-900"
+                                          title="Leave Review"
+                                        >
+                                          <StarIcon className="w-4 h-4" />
+                                        </button>
+                                      </>
                                     )}
                                   </div>
                                 </td>
@@ -3772,6 +3822,19 @@ export default function PetOwnerDashboard() {
               onClose={handleCloseDetailsModal}
               appointmentId={detailsAppointmentId}
               onAppointmentUpdate={handleAppointmentUpdate}
+            />
+          )}
+
+          {/* Review Submission Modal */}
+          {selectedAppointmentForReview && (
+            <ReviewSubmissionModal
+              isOpen={showReviewModal}
+              onClose={() => {
+                setShowReviewModal(false);
+                setSelectedAppointmentForReview(null);
+              }}
+              appointment={selectedAppointmentForReview}
+              onReviewSubmitted={handleReviewSubmitted}
             />
           )}
 

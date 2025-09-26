@@ -14,10 +14,7 @@ export async function POST(request: NextRequest) {
     const fullName = formData.get('fullName') as string;
     const phone = formData.get('phone') as string;
     const address = formData.get('address') as string;
-    const specialization = formData.get('specialization') as string;
     const licenseNumber = formData.get('licenseNumber') as string;
-    const yearsExperience = formData.get('yearsExperience') as string;
-    const consultationFee = formData.get('consultationFee') as string;
     const businessPermit = formData.get('businessPermit') as File;
     const governmentId = formData.get('governmentId') as File;
     
@@ -118,10 +115,7 @@ export async function POST(request: NextRequest) {
           email: email.toLowerCase().trim(),
           full_name: fullName.trim(),
           phone: phone.trim(),
-          specialization: specialization?.trim() || null,
           license_number: licenseNumber.trim(),
-          years_experience: parseInt(yearsExperience) || 0,
-          consultation_fee: parseFloat(consultationFee) || 0,
           business_permit_url: businessPermitPath,
           government_id_url: governmentIdPath,
           status: 'pending',
@@ -142,8 +136,7 @@ export async function POST(request: NextRequest) {
         await sendNotification('VET_REGISTRATION_PENDING', email.toLowerCase().trim(), {
           fullName: fullName.trim(),
           email: email.toLowerCase().trim(),
-          licenseNumber: licenseNumber.trim(),
-          specialization: specialization?.trim() || 'General Practice'
+          licenseNumber: licenseNumber.trim()
         });
         
         // Send notification to admins (if admin email is configured)
@@ -153,9 +146,6 @@ export async function POST(request: NextRequest) {
             email: email.toLowerCase().trim(),
             phone: phone.trim(),
             licenseNumber: licenseNumber.trim(),
-            specialization: specialization?.trim() || 'General Practice',
-            yearsExperience: parseInt(yearsExperience) || 0,
-            consultationFee: parseFloat(consultationFee) || 0,
             submittedAt: new Date().toISOString()
           });
         }

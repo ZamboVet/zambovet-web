@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { AuthHelper, handleAuthError } from '@/lib/auth-helper';
 
 interface UserProfile {
   id: string;
@@ -49,99 +50,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (userId: string, retries = 3): Promise<UserProfile | null> => {
+  const fetchUserProfile = async (userId: string, retries = 2): Promise<UserProfile | null> => {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         if (attempt > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt)); // Reduce delay
         }
 
+        // Single optimized query with joins to reduce round trips
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select(`
+            *,
+            pet_owner_profiles(*),
+            veterinarians(*)
+          `)
           .eq('id', userId)
           .single();
 
-        // If profile is missing, create it (dev mode only)
-        if ((!profile || error) && attempt === 0) {
-          // Try to create a default profile for this user
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            // Insert a default profile (adjust user_role as needed)
-            const { error: insertError } = await supabase.from('profiles').insert({
-              id: user.id,
-              email: user.email,
-              full_name: user.user_metadata?.full_name || '',
-              user_role: 'pet_owner',
-              is_active: true,
-            });
-            if (!insertError) {
-              // Try fetching again
-              const { data: newProfile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-              if (newProfile) {
-                let roleProfile = null;
-                if (newProfile.user_role === 'pet_owner') {
-                  const { data: petOwnerProfile, error: petOwnerError } = await supabase
-                    .from('pet_owner_profiles')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .single();
-                  if (!petOwnerError) {
-                    roleProfile = petOwnerProfile;
-                  }
-                } else if (newProfile.user_role === 'veterinarian') {
-                  const { data: vetProfile, error: vetError } = await supabase
-                    .from('veterinarians')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .single();
-                  if (!vetError) {
-                    roleProfile = vetProfile;
-                  }
-                }
-                return { ...newProfile, roleProfile };
-              }
-            }
-          }
-        }
-
-        if (error) {
-          // If profile not found and this is not the last attempt, continue retrying
-          if (error.code === 'PGRST116' && attempt < retries - 1) {
-            console.log(`Profile not found for user ${userId}, retrying... (attempt ${attempt + 1})`);
+        // If profile is missing, skip auto-creation to avoid delays
+        if (!profile || error) {
+          if (error?.code === 'PGRST116' && attempt < retries - 1) {
+            console.log(`Profile not found, retrying... (${attempt + 1}/${retries})`);
             continue;
           }
-          console.error('Error fetching user profile:', error);
+          console.error('Profile not found or error:', error);
           return null;
         }
+
+        // Process the joined data from the single query
         if (!profile) return null;
 
+        // Extract role profile from joined data
         let roleProfile = null;
-        // Fetch role-specific profile data
-        if (profile.user_role === 'pet_owner') {
-          const { data: petOwnerProfile, error: petOwnerError } = await supabase
-            .from('pet_owner_profiles')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-          if (!petOwnerError) {
-            roleProfile = petOwnerProfile;
-          }
-        } else if (profile.user_role === 'veterinarian') {
-          const { data: vetProfile, error: vetError } = await supabase
-            .from('veterinarians')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-          if (!vetError) {
-            roleProfile = vetProfile;
-          }
+        if (profile.user_role === 'pet_owner' && profile.pet_owner_profiles) {
+          roleProfile = Array.isArray(profile.pet_owner_profiles) 
+            ? profile.pet_owner_profiles[0] 
+            : profile.pet_owner_profiles;
+        } else if (profile.user_role === 'veterinarian' && profile.veterinarians) {
+          roleProfile = Array.isArray(profile.veterinarians) 
+            ? profile.veterinarians[0] 
+            : profile.veterinarians;
         }
-        return { ...profile, roleProfile };
+
+        // Clean up the profile object
+        const { pet_owner_profiles, veterinarians, ...cleanProfile } = profile;
+        return { ...cleanProfile, roleProfile };
       } catch (error) {
         console.error(`Error in fetchUserProfile (attempt ${attempt + 1}):`, error);
         if (attempt === retries - 1) {
@@ -167,33 +121,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Clear auth data first
+      AuthHelper.clearAuthData();
+      
+      // Then sign out from Supabase
       await supabase.auth.signOut();
+      
+      // Clear local state
       setUser(null);
       setSession(null);
       setUserProfile(null);
     } catch (error) {
       console.error('Error signing out:', error);
+      // Even if signOut fails, clear local data
+      AuthHelper.clearAuthData();
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
     }
   };
 
   useEffect(() => {
-    // Get initial session
+    let mounted = true;
+    
+    // Get initial session with error handling
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-      } else {
+      try {
+        // Use direct supabase call for faster initial load
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
+          // Load profile in background, don't block UI
+          fetchUserProfile(session.user.id, 1).then(profile => {
+            if (mounted) {
+              setUserProfile(profile);
+            }
+          }).catch(error => {
+            console.error('Error loading profile:', error);
+          });
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
+        if (mounted) {
+          setLoading(false);
         }
       }
-      
-      setLoading(false);
     };
 
     getInitialSession();
@@ -201,28 +186,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Only log important auth events, not the initial session check
+        if (!mounted) return;
+        
+        // Only log important auth events
         if (event !== 'INITIAL_SESSION') {
-          console.log('Auth state changed:', event, session?.user?.email);
+          console.log('Auth state changed:', event);
         }
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // For SIGNED_IN event, we might need to wait a bit for the profile to be created
-          const retries = event === 'SIGNED_IN' ? 5 : 3;
+          // Reduce retries for faster auth state changes
+          const retries = event === 'SIGNED_IN' ? 2 : 1;
           const profile = await fetchUserProfile(session.user.id, retries);
-          setUserProfile(profile);
+          if (mounted) {
+            setUserProfile(profile);
+          }
         } else {
           setUserProfile(null);
         }
-        
-        setLoading(false);
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

@@ -9,10 +9,7 @@ import {
     UserIcon,
     PhoneIcon,
     MapPinIcon,
-    DocumentTextIcon,
-    AcademicCapIcon,
-    BanknotesIcon,
-    ClockIcon
+    DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,10 +34,7 @@ export default function SignupPage() {
         emergencyContactPhone: '',
 
         // Veterinarian specific fields (if userRole is veterinarian)
-        specialization: '',
         licenseNumber: '',
-        yearsExperience: '',
-        consultationFee: '',
         businessPermit: null as File | null,
         governmentId: null as File | null,
 
@@ -315,10 +309,7 @@ export default function SignupPage() {
                 address: '',
                 emergencyContactName: '',
                 emergencyContactPhone: '',
-                specialization: '',
                 licenseNumber: '',
-                yearsExperience: '',
-                consultationFee: '',
                 businessPermit: null,
                 governmentId: null,
                 agreeToTerms: false,
@@ -822,26 +813,6 @@ export default function SignupPage() {
                                     <p className="text-sm text-[#b3c7e6]">Please provide your professional credentials for verification</p>
                                 </div>
 
-                                {/* Specialization */}
-                                <div>
-                                    <label htmlFor="specialization" className="block text-sm font-medium text-[#0032A0] mb-2">
-                                        Specialization
-                                    </label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <AcademicCapIcon className="h-5 w-5 text-[#b3c7e6]" />
-                                        </div>
-                                        <input
-                                            id="specialization"
-                                            name="specialization"
-                                            type="text"
-                                            value={formData.specialization}
-                                            onChange={handleInputChange}
-                                            className="block w-full pl-10 pr-3 py-3 border border-[#b3c7e6] rounded-lg focus:ring-2 focus:ring-[#0032A0] focus:border-transparent transition-all duration-200 text-[#0032A0] placeholder-[#b3c7e6]"
-                                            placeholder="e.g., General Practice, Small Animal Surgery"
-                                        />
-                                    </div>
-                                </div>
 
                                 {/* License Number */}
                                 <div>
@@ -865,51 +836,6 @@ export default function SignupPage() {
                                     </div>
                                 </div>
 
-                                {/* Years of Experience and Consultation Fee */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="yearsExperience" className="block text-sm font-medium text-[#0032A0] mb-2">
-                                            Years of Experience
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <ClockIcon className="h-5 w-5 text-[#b3c7e6]" />
-                                            </div>
-                                            <input
-                                                id="yearsExperience"
-                                                name="yearsExperience"
-                                                type="number"
-                                                min="0"
-                                                value={formData.yearsExperience}
-                                                onChange={handleInputChange}
-                                                className="block w-full pl-10 pr-3 py-3 border border-[#b3c7e6] rounded-lg focus:ring-2 focus:ring-[#0032A0] focus:border-transparent transition-all duration-200 text-[#0032A0] placeholder-[#b3c7e6]"
-                                                placeholder="5"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="consultationFee" className="block text-sm font-medium text-[#0032A0] mb-2">
-                                            Consultation Fee (₱)
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <BanknotesIcon className="h-5 w-5 text-[#b3c7e6]" />
-                                            </div>
-                                            <input
-                                                id="consultationFee"
-                                                name="consultationFee"
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={formData.consultationFee}
-                                                onChange={handleInputChange}
-                                                className="block w-full pl-10 pr-3 py-3 border border-[#b3c7e6] rounded-lg focus:ring-2 focus:ring-[#0032A0] focus:border-transparent transition-all duration-200 text-[#0032A0] placeholder-[#b3c7e6]"
-                                                placeholder="1500.00"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
 
                                 {/* Document Uploads */}
                                 <div className="space-y-4">

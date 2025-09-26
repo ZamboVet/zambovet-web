@@ -82,14 +82,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           desc: 'Medical professionals'
         },
         {
-          name: 'System Analytics',
-          href: '/admin/analytics',
-          icon: ChartBarIcon,
-          iconSolid: ChartBarIconSolid,
-          current: pathname?.startsWith('/admin/analytics') || false,
-          desc: 'Reports & insights'
-        },
-        {
           name: 'Recent Activity',
           href: '/admin/activity',
           icon: ClockIcon,

@@ -4,6 +4,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subMonths,
+  eachMonthOfInterval,
+  parseISO
+} from 'date-fns';
+import { 
   UsersIcon,
   HeartIcon,
   CalendarDaysIcon,
@@ -28,6 +38,215 @@ interface AnalyticsData {
   error?: string;
 }
 
+// Direct data fetching functions using Supabase client
+const fetchOverviewData = async () => {
+  try {
+    // Fetch all required data in parallel
+    const [
+      usersResult,
+      petsResult,
+      appointmentsResult,
+      clinicsResult,
+      applicationsResult
+    ] = await Promise.all([
+      supabase.from('profiles').select('user_role', { count: 'exact' }),
+      supabase.from('patients').select('id, is_active', { count: 'exact' }),
+      supabase.from('appointments').select('id, status, total_amount', { count: 'exact' }),
+      supabase.from('clinics').select('id', { count: 'exact' }),
+      supabase.from('veterinarian_applications').select('status', { count: 'exact' })
+    ]);
+
+    // Calculate totals
+    const totalUsers = usersResult.count || 0;
+    const totalPets = petsResult.count || 0;
+    const totalAppointments = appointmentsResult.count || 0;
+    const totalClinics = clinicsResult.count || 0;
+
+    // Calculate user breakdown
+    const users = usersResult.data || [];
+    const totalPetOwners = users.filter(u => u.user_role === 'pet_owner').length;
+    const totalVeterinarians = users.filter(u => u.user_role === 'veterinarian').length;
+
+    // Calculate appointment stats
+    const appointments = appointmentsResult.data || [];
+    const activeAppointments = appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').length;
+    const completedAppointments = appointments.filter(a => a.status === 'confirmed').length;
+
+    // Calculate revenue
+    const totalRevenue = appointments
+      .filter(a => a.total_amount)
+      .reduce((sum, a) => sum + parseFloat(a.total_amount), 0);
+
+    // Get current month revenue
+    const currentMonth = new Date();
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    
+    const { data: monthlyAppointments } = await supabase
+      .from('appointments')
+      .select('total_amount')
+      .gte('appointment_date', format(monthStart, 'yyyy-MM-dd'))
+      .lte('appointment_date', format(monthEnd, 'yyyy-MM-dd'));
+    
+    const monthlyRevenue = (monthlyAppointments || [])
+      .filter(a => a.total_amount)
+      .reduce((sum, a) => sum + parseFloat(a.total_amount), 0);
+
+    // Calculate pending applications
+    const applications = applicationsResult.data || [];
+    const pendingApplications = applications.filter(a => a.status === 'pending').length;
+
+    return {
+      totalUsers,
+      totalPetOwners,
+      totalVeterinarians,
+      totalPets,
+      totalAppointments,
+      totalClinics,
+      pendingApplications,
+      activeAppointments,
+      completedAppointments,
+      totalRevenue,
+      monthlyRevenue,
+      averageAppointmentValue: totalAppointments > 0 ? totalRevenue / totalAppointments : 0
+    };
+  } catch (error) {
+    console.error('Error fetching overview data:', error);
+    throw error;
+  }
+};
+
+const fetchAppointmentsData = async () => {
+  try {
+    const { data: appointments } = await supabase
+      .from('appointments')
+      .select('*');
+
+    if (!appointments) return null;
+
+    const totalAppointments = appointments.length;
+    const completedAppointments = appointments.filter(a => a.status === 'confirmed').length;
+    const cancelledAppointments = appointments.filter(a => a.status === 'cancelled').length;
+    const pendingAppointments = appointments.filter(a => a.status === 'pending').length;
+
+    // Group by status
+    const appointmentsByStatus = Object.entries(
+      appointments.reduce((acc, appointment) => {
+        const status = appointment.status || 'Unknown';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([status, count]) => ({
+      status,
+      count,
+      percentage: totalAppointments > 0 ? (count / totalAppointments) * 100 : 0
+    }));
+
+    // Group by booking type
+    const appointmentsByBookingType = Object.entries(
+      appointments.reduce((acc, appointment) => {
+        const type = appointment.booking_type || 'Online';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([status, count]) => ({
+      status,
+      count,
+      percentage: totalAppointments > 0 ? (count / totalAppointments) * 100 : 0
+    }));
+
+    // Group by reason
+    const popularReasons = Object.entries(
+      appointments.reduce((acc, appointment) => {
+        const reason = appointment.reason_for_visit || 'Not specified';
+        acc[reason] = (acc[reason] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      totalAppointments,
+      completedAppointments,
+      cancelledAppointments,
+      pendingAppointments,
+      appointmentsByStatus,
+      appointmentsByBookingType,
+      popularReasons
+    };
+  } catch (error) {
+    console.error('Error fetching appointments data:', error);
+    throw error;
+  }
+};
+
+const fetchFinancialData = async () => {
+  try {
+    const { data: appointments } = await supabase
+      .from('appointments')
+      .select('total_amount, payment_status, created_at, veterinarian_id');
+
+    if (!appointments) return null;
+
+    const validAppointments = appointments.filter(a => a.total_amount && parseFloat(a.total_amount) > 0);
+    const totalRevenue = validAppointments.reduce((sum, apt) => sum + parseFloat(apt.total_amount), 0);
+
+    // Calculate monthly and yearly revenue
+    const currentDate = new Date();
+    const monthlyRevenue = validAppointments
+      .filter(apt => {
+        const aptDate = parseISO(apt.created_at);
+        return aptDate >= startOfMonth(currentDate) && aptDate <= endOfMonth(currentDate);
+      })
+      .reduce((sum, apt) => sum + parseFloat(apt.total_amount), 0);
+
+    const averageAppointmentValue = validAppointments.length > 0 
+      ? totalRevenue / validAppointments.length 
+      : 0;
+
+    // Group by payment status
+    const revenueByPaymentStatus = Object.entries(
+      appointments.reduce((acc, appointment) => {
+        const status = appointment.payment_status || 'Unknown';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([status, count]) => ({ status, count }));
+
+    // Get top earning veterinarians
+    const { data: veterinarians } = await supabase
+      .from('veterinarians')
+      .select('id, full_name, specialization');
+
+    const topEarningVeterinarians = (veterinarians || []).map(vet => {
+      const vetAppointments = validAppointments.filter(apt => apt.veterinarian_id === vet.id);
+      const totalRevenue = vetAppointments.reduce((sum, apt) => sum + parseFloat(apt.total_amount), 0);
+      
+      return {
+        id: vet.id,
+        name: vet.full_name,
+        specialization: vet.specialization || 'General',
+        totalRevenue,
+        appointmentCount: vetAppointments.length,
+        averageAppointmentValue: vetAppointments.length > 0 ? totalRevenue / vetAppointments.length : 0
+      };
+    }).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    return {
+      totalRevenue,
+      monthlyRevenue,
+      averageAppointmentValue,
+      revenueByPaymentStatus,
+      topEarningVeterinarians,
+      revenueGrowthRate: 12.5 // This would need historical comparison
+    };
+  } catch (error) {
+    console.error('Error fetching financial data:', error);
+    throw error;
+  }
+};
+
 export default function AnalyticsDashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const [data, setData] = useState<AnalyticsData>({
@@ -42,8 +261,31 @@ export default function AnalyticsDashboard() {
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
+      // Check if auth is still loading
+      if (authLoading) {
+        console.log('Analytics: Auth still loading, waiting...');
+        setData(prev => ({ ...prev, loading: true }));
+        return;
+      }
+      
+      
       // Check if user is authenticated and is admin
-      if (!user || !userProfile || userProfile.user_role !== 'admin') {
+      if (!user) {
+        setData(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Authentication required. Please log in as an admin.'
+        }));
+        return;
+      }
+      
+      if (!userProfile) {
+        // Keep loading state if userProfile isn't loaded yet
+        setData(prev => ({ ...prev, loading: true }));
+        return;
+      }
+      
+      if (userProfile.user_role !== 'admin') {
         setData(prev => ({
           ...prev,
           loading: false,
@@ -54,44 +296,19 @@ export default function AnalyticsDashboard() {
 
       setData(prev => ({ ...prev, loading: true, error: undefined }));
 
-      const filters = {
-        dateRange: {
-          start: dateRange.start,
-          end: dateRange.end
-        }
-      };
+      console.log('Fetching analytics data directly from Supabase...');
 
-      console.log('Fetching analytics data with filters:', filters);
-
-      const [overviewRes, appointmentsRes, financialRes] = await Promise.all([
-        fetch(`/api/admin/analytics/overview?filters=${encodeURIComponent(JSON.stringify(filters))}`, {
-          method: 'GET',
-          credentials: 'include'
-        }),
-        fetch(`/api/admin/analytics/appointments?filters=${encodeURIComponent(JSON.stringify(filters))}`, {
-          method: 'GET',
-          credentials: 'include'
-        }),
-        fetch(`/api/admin/analytics/financial?filters=${encodeURIComponent(JSON.stringify(filters))}`, {
-          method: 'GET',
-          credentials: 'include'
-        })
-      ]);
-
-      if (!overviewRes.ok || !appointmentsRes.ok || !financialRes.ok) {
-        throw new Error('Failed to fetch analytics data');
-      }
-
+      // Fetch data directly from Supabase like other parts of the app
       const [overview, appointments, financial] = await Promise.all([
-        overviewRes.json(),
-        appointmentsRes.json(),
-        financialRes.json()
+        fetchOverviewData(),
+        fetchAppointmentsData(),
+        fetchFinancialData()
       ]);
 
       setData({
-        overview: overview.data,
-        appointments: appointments.data,
-        financial: financial.data,
+        overview,
+        appointments,
+        financial,
         loading: false
       });
     } catch (error) {
@@ -102,7 +319,7 @@ export default function AnalyticsDashboard() {
         error: 'Failed to load analytics data. Please try again.'
       }));
     }
-  }, [dateRange, user, userProfile]);
+  }, [dateRange, user, userProfile, authLoading]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -610,11 +827,16 @@ export default function AnalyticsDashboard() {
     );
   };
 
-  // Show loading while auth is still loading
-  if (authLoading) {
+  // Show loading while auth is still loading or user profile isn't ready
+  if (authLoading || (user && !userProfile)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {authLoading ? 'Loading authentication...' : 'Loading user profile...'}
+          </p>
+        </div>
       </div>
     );
   }
@@ -637,19 +859,11 @@ export default function AnalyticsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Enhanced Header with Controls */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+    <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
+      {/* Controls Header */}
+      <div className="bg-white border-b border-gray-200 mb-8">
         <div className="px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <ChartBarIcon className="w-8 h-8 text-gray-700 mr-3" />
-                System Analytics
-              </h1>
-              <p className="text-gray-600 mt-1">Comprehensive system insights and reporting</p>
-            </div>
-            
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               {/* Date Range Picker */}
               <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
@@ -684,7 +898,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* Enhanced Tabs */}
+        {/* Analytics Tabs */}
         <div className="px-6 lg:px-8">
           <nav className="flex space-x-1" aria-label="Tabs">
             {tabs.map((tab) => {
@@ -710,17 +924,17 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* Enhanced Content Area */}
-      <div className="px-6 lg:px-8 py-8">
+      {/* Content Area */}
+      <div className="px-6 lg:px-8 pb-8">
         {data.error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex">
+            <div className="flex items-start">
               <div className="flex-shrink-0">
                 <svg className="w-5 h-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex-1">
                 <h3 className="text-sm font-medium text-red-800">Error</h3>
                 <p className="text-sm text-red-700 mt-1">{data.error}</p>
               </div>
