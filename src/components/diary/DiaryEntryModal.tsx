@@ -210,54 +210,93 @@ export default function DiaryEntryModal({
 
     const uploadPhotos = async (): Promise<string[]> => {
         if (selectedPhotos.length === 0) {
-            return formData.photos; // Return existing photos if no new photos selected
+            return formData.photos || []; // Return existing photos if no new photos selected
         }
 
         setPhotoUploading(true);
         console.log('Starting photo upload for', selectedPhotos.length, 'photos');
         
         try {
-            const uploadPromises = selectedPhotos.map(async (file, index) => {
+            const uploadedUrls: string[] = [];
+            
+            // Upload photos one by one to better handle errors
+            for (let i = 0; i < selectedPhotos.length; i++) {
+                const file = selectedPhotos[i];
                 const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const timestamp = Date.now();
-                const fileName = `${timestamp}_${index}.${fileExt}`;
-                const filePath = `${currentSelectedPetId}/${fileName}`;
+                const fileName = `${timestamp}_${i}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                const filePath = `diary-photos/${currentSelectedPetId}/${fileName}`;
 
-                console.log('Uploading photo:', fileName, 'to path:', filePath);
-
-                const { data, error } = await supabase.storage
-                    .from('pet-images')
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (error) {
-                    console.error('Error uploading photo:', fileName, error);
-                    throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+                console.log(`Uploading photo ${i + 1}/${selectedPhotos.length}:`, fileName);
+                
+                let uploadSuccess = false;
+                let finalUrl = '';
+                
+                // Try buckets in priority order
+                const bucketNames = ['pet-images', 'images', 'uploads', 'diary-images'];
+                
+                for (const bucketName of bucketNames) {
+                    try {
+                        console.log(`Attempting upload to bucket: ${bucketName}`);
+                        
+                        const { data: uploadData, error: uploadError } = await supabase.storage
+                            .from(bucketName)
+                            .upload(filePath, file, {
+                                cacheControl: '3600',
+                                upsert: false
+                            });
+                        
+                        if (uploadError) {
+                            console.warn(`Upload to ${bucketName} failed:`, uploadError.message);
+                            continue; // Try next bucket
+                        }
+                        
+                        if (uploadData?.path) {
+                            // Get public URL
+                            const { data: urlData } = supabase.storage
+                                .from(bucketName)
+                                .getPublicUrl(filePath);
+                            
+                            if (urlData?.publicUrl) {
+                                finalUrl = urlData.publicUrl;
+                                uploadSuccess = true;
+                                console.log(`Photo uploaded successfully to ${bucketName}:`, finalUrl);
+                                break;
+                            }
+                        }
+                    } catch (bucketError) {
+                        console.warn(`Exception with bucket ${bucketName}:`, bucketError);
+                        continue;
+                    }
                 }
-
-                console.log('Photo uploaded successfully:', data.path);
-
-                // Get public URL
-                const { data: urlData } = supabase.storage
-                    .from('pet-images')
-                    .getPublicUrl(filePath);
-
-                return urlData.publicUrl;
-            });
-
-            const uploadedUrls = await Promise.all(uploadPromises);
-            console.log('All photos uploaded successfully:', uploadedUrls);
+                
+                if (!uploadSuccess) {
+                    console.error(`Failed to upload ${file.name} to any bucket`);
+                    throw new Error(`Failed to upload ${file.name}. Please check your storage configuration.`);
+                }
+                
+                uploadedUrls.push(finalUrl);
+            }
+            
+            console.log(`All ${uploadedUrls.length} photos uploaded successfully`);
             
             // Combine existing photos with newly uploaded ones
-            return [...(formData.photos || []), ...uploadedUrls];
+            const allPhotoUrls = [...(formData.photos || []), ...uploadedUrls];
+            console.log('Combined photo URLs:', allPhotoUrls);
+            
+            return allPhotoUrls;
             
         } catch (error) {
             console.error('Photo upload failed:', error);
-            throw new Error(`Photo upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during upload';
+            alert(`Photo upload failed: ${errorMessage}\n\nPlease try again or contact support if this continues.`);
+            
+            // Return existing photos if upload fails
+            return formData.photos || [];
         } finally {
+            // Always ensure photoUploading is reset
             setPhotoUploading(false);
+            console.log('Photo upload process completed - loading state reset');
         }
     };
 
@@ -338,6 +377,9 @@ export default function DiaryEntryModal({
             console.log('DiaryEntryModal: Calling onClose callback...');
             onClose();
             resetForm();
+            
+            // Clear selected photos after successful save
+            setSelectedPhotos([]);
             
             // Show success message
             alert('Diary entry saved successfully!');
@@ -476,7 +518,7 @@ export default function DiaryEntryModal({
                                         type="date"
                                         value={formData.entry_date}
                                         onChange={(e) => handleInputChange('entry_date', e.target.value)}
-                                        className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     />
                                 </div>
@@ -491,7 +533,7 @@ export default function DiaryEntryModal({
                                     value={formData.title}
                                     onChange={(e) => handleInputChange('title', e.target.value)}
                                     placeholder="e.g., Morning walk, Vet checkup..."
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                                 />
                             </div>
                         </div>
@@ -506,7 +548,7 @@ export default function DiaryEntryModal({
                             <select
                                 value={formData.mood}
                                 onChange={(e) => handleInputChange('mood', e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select mood</option>
                                 {moodOptions.map(mood => (
@@ -524,7 +566,7 @@ export default function DiaryEntryModal({
                             <select
                                 value={formData.activity_level}
                                 onChange={(e) => handleInputChange('activity_level', e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select activity</option>
                                 {activityOptions.map(activity => (
@@ -542,7 +584,7 @@ export default function DiaryEntryModal({
                             <select
                                 value={formData.appetite}
                                 onChange={(e) => handleInputChange('appetite', e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select appetite</option>
                                 {appetiteOptions.map(appetite => (
@@ -565,7 +607,7 @@ export default function DiaryEntryModal({
                                 onChange={(e) => handleInputChange('content', e.target.value)}
                                 placeholder="Describe your pet's day, behavior, or any general observations..."
                                 rows={4}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                             />
                         </div>
 
@@ -579,7 +621,7 @@ export default function DiaryEntryModal({
                                     onChange={(e) => handleInputChange('health_observations', e.target.value)}
                                     placeholder="Any health-related observations or concerns..."
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                                 />
                             </div>
 
@@ -592,7 +634,7 @@ export default function DiaryEntryModal({
                                     onChange={(e) => handleInputChange('symptoms', e.target.value)}
                                     placeholder="Any symptoms or unusual behavior noticed..."
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                                 />
                             </div>
                         </div>
@@ -606,7 +648,7 @@ export default function DiaryEntryModal({
                                 onChange={(e) => handleInputChange('behavior_notes', e.target.value)}
                                 placeholder="Behavioral patterns, social interactions, or training progress..."
                                 rows={3}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                             />
                         </div>
 

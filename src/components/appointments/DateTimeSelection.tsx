@@ -48,6 +48,34 @@ export default function DateTimeSelection({
         
         return slots;
     };
+    
+    // Function to check if a time slot is in the past for today's date
+    const isTimeSlotPast = (timeValue: string, dateStr: string) => {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Only check for today's date
+        if (dateStr !== today) {
+            return false;
+        }
+        
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        const [hour, minute] = timeValue.split(':').map(Number);
+        
+        // If selected hour is less than current hour, it's in the past
+        if (hour < currentHour) {
+            return true;
+        }
+        
+        // If same hour but selected minute is less than current minute, it's in the past
+        if (hour === currentHour && minute <= currentMinute) {
+            return true;
+        }
+        
+        return false;
+    };
 
     const timeSlots = generateTimeSlots();
 
@@ -72,8 +100,10 @@ export default function DateTimeSelection({
                 if (isBefore(date, new Date()) && !isToday(date)) {
                     slots[dateStr] = [];
                 } else {
-                    // Simulate some random availability
-                    const availableSlots = timeSlots.filter(() => Math.random() > 0.3);
+                    // Simulate some random availability and filter out past times
+                    const availableSlots = timeSlots
+                        .filter(() => Math.random() > 0.3)
+                        .filter(timeSlot => !isTimeSlotPast(timeSlot, dateStr));
                     slots[dateStr] = availableSlots;
                 }
             }
@@ -201,19 +231,28 @@ export default function DateTimeSelection({
                             </h4>
 
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                                {availableSlots[selectedDate].map((time) => (
-                                    <button
-                                        key={time}
-                                        type="button"
-                                        onClick={() => handleDateTimeSelect(new Date(selectedDate), time)}
-                                        className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${selectedTime === time
-                                                ? 'border-teal-500 bg-teal-500 text-white'
-                                                : 'border-gray-200 text-gray-700 hover:border-teal-300 hover:bg-teal-50'
-                                            }`}
-                                    >
-                                        {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
-                                    </button>
-                                ))}
+                                {availableSlots[selectedDate]
+                                    .filter(time => !isTimeSlotPast(time, selectedDate))
+                                    .map((time) => {
+                                        const isPast = isTimeSlotPast(time, selectedDate);
+                                        return (
+                                            <button
+                                                key={time}
+                                                type="button"
+                                                onClick={() => !isPast && handleDateTimeSelect(new Date(selectedDate), time)}
+                                                disabled={isPast}
+                                                className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${
+                                                    isPast
+                                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                        : selectedTime === time
+                                                            ? 'border-teal-500 bg-teal-500 text-white'
+                                                            : 'border-gray-200 text-gray-700 hover:border-teal-300 hover:bg-teal-50'
+                                                }`}
+                                            >
+                                                {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                                            </button>
+                                        );
+                                    })}
                             </div>
                         </div>
                     )}

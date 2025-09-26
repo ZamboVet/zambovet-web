@@ -28,7 +28,7 @@ export default function ProtectedRoute({
       if (requiredRole && userProfile?.user_role !== requiredRole) {
         // Redirect to appropriate dashboard based on user role
         if (userProfile?.user_role === 'veterinarian') {
-          router.push('/vet-dashboard');
+          router.push('/veterinarian');
         } else if (userProfile?.user_role === 'admin') {
           router.push('/admin');
         } else {

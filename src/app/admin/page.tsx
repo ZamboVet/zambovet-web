@@ -34,7 +34,8 @@ import {
   BellIcon,
   ChevronRightIcon,
   MagnifyingGlassIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  HeartIcon
 } from '@heroicons/react/24/outline';
 
 interface AdminStats {
@@ -91,6 +92,18 @@ export default function AdminDashboard() {
     accentColor: '#fffbde'
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
+
+  // Modal states
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showClinicModal, setShowClinicModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showVeterinarianModal, setShowVeterinarianModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedClinic, setSelectedClinic] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedVeterinarian, setSelectedVeterinarian] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [updating, setUpdating] = useState(false);
 
   // Pagination state - reduced page size for faster loading
   const PAGE_SIZE = 5;
@@ -582,6 +595,273 @@ export default function AdminDashboard() {
     }
   };
 
+  // User Management Functions
+  const handleViewUser = async (userId: string) => {
+    try {
+      const { data: user, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      
+      setSelectedUser(user);
+      setEditFormData({ full_name: user.full_name || '', user_role: user.user_role });
+      setShowUserModal(true);
+    } catch (error: any) {
+      console.error('Error fetching user:', error);
+      alert('Failed to fetch user details: ' + error.message);
+    }
+  };
+
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setUpdating(true);
+      const updates: any = {};
+      if (editFormData.full_name && editFormData.full_name.trim()) updates.full_name = editFormData.full_name.trim();
+      if (editFormData.user_role && ['admin', 'veterinarian', 'pet_owner', 'receptionist'].includes(editFormData.user_role)) {
+        updates.user_role = editFormData.user_role;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        alert('No valid updates provided');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', selectedUser.id);
+      
+      if (error) throw error;
+      
+      alert('User updated successfully!');
+      setShowUserModal(false);
+      fetchTabData('users');
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      alert('Failed to update user: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: string, newStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this user?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newStatus })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      alert(`User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      fetchTabData('users');
+    } catch (error: any) {
+      console.error('Error updating user status:', error);
+      alert('Failed to update user status: ' + error.message);
+    }
+  };
+
+  // Clinic Management Functions
+  const handleViewClinic = async (clinicId: number) => {
+    try {
+      const { data: clinic, error } = await supabase
+        .from('clinics')
+        .select('*')
+        .eq('id', clinicId)
+        .single();
+      
+      if (error) throw error;
+      
+      setSelectedClinic(clinic);
+      setEditFormData({ name: clinic.name, phone: clinic.phone || '', email: clinic.email || '' });
+      setShowClinicModal(true);
+    } catch (error: any) {
+      console.error('Error fetching clinic:', error);
+      alert('Failed to fetch clinic details: ' + error.message);
+    }
+  };
+
+  const handleEditClinic = async () => {
+    if (!selectedClinic) return;
+    
+    try {
+      setUpdating(true);
+      const updates: any = {};
+      if (editFormData.name && editFormData.name.trim()) updates.name = editFormData.name.trim();
+      if (editFormData.phone && editFormData.phone.trim()) updates.phone = editFormData.phone.trim();
+      if (editFormData.email && editFormData.email.trim()) updates.email = editFormData.email.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        alert('No valid updates provided');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('clinics')
+        .update(updates)
+        .eq('id', selectedClinic.id);
+      
+      if (error) throw error;
+      
+      alert('Clinic updated successfully!');
+      setShowClinicModal(false);
+      fetchTabData('clinics');
+    } catch (error: any) {
+      console.error('Error updating clinic:', error);
+      alert('Failed to update clinic: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleToggleClinicStatus = async (clinicId: number, newStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this clinic?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({ is_active: newStatus })
+        .eq('id', clinicId);
+      
+      if (error) throw error;
+      
+      alert(`Clinic ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      fetchTabData('clinics');
+    } catch (error: any) {
+      console.error('Error updating clinic status:', error);
+      alert('Failed to update clinic status: ' + error.message);
+    }
+  };
+
+  // Appointment Management Functions
+  const handleViewAppointment = async (appointmentId: number) => {
+    try {
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patients(name, species, breed),
+          pet_owner_profiles(full_name, phone),
+          veterinarians(full_name, specialization),
+          clinics(name, address, phone)
+        `)
+        .eq('id', appointmentId)
+        .single();
+      
+      if (error) throw error;
+      
+      setSelectedAppointment(appointment);
+      setShowAppointmentModal(true);
+    } catch (error: any) {
+      console.error('Error fetching appointment:', error);
+      alert('Failed to fetch appointment details: ' + error.message);
+    }
+  };
+
+  // Veterinarian Management Functions
+  const handleViewVeterinarian = async (vetId: string) => {
+    try {
+      const { data: vet, error } = await supabase
+        .from('veterinarians')
+        .select(`
+          *,
+          profiles(email, phone, is_active),
+          clinics(name, address)
+        `)
+        .eq('id', vetId)
+        .single();
+      
+      if (error) throw error;
+      
+      setSelectedVeterinarian(vet);
+      setEditFormData({ 
+        specialization: vet.specialization || '', 
+        consultation_fee: vet.consultation_fee || 0 
+      });
+      setShowVeterinarianModal(true);
+    } catch (error: any) {
+      console.error('Error fetching veterinarian:', error);
+      alert('Failed to fetch veterinarian details: ' + error.message);
+    }
+  };
+
+  const handleEditVeterinarian = async () => {
+    if (!selectedVeterinarian) return;
+    
+    try {
+      setUpdating(true);
+      const updates: any = {};
+      if (editFormData.specialization && editFormData.specialization.trim()) {
+        updates.specialization = editFormData.specialization.trim();
+      }
+      if (editFormData.consultation_fee && !isNaN(Number(editFormData.consultation_fee))) {
+        updates.consultation_fee = Number(editFormData.consultation_fee);
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        alert('No valid updates provided');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('veterinarians')
+        .update(updates)
+        .eq('id', selectedVeterinarian.id);
+      
+      if (error) throw error;
+      
+      alert('Veterinarian updated successfully!');
+      setShowVeterinarianModal(false);
+      fetchTabData('veterinarians');
+    } catch (error: any) {
+      console.error('Error updating veterinarian:', error);
+      alert('Failed to update veterinarian: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleToggleVeterinarianStatus = async (vetId: string, newStatus: string) => {
+    if (!confirm(`Are you sure you want to ${newStatus === 'approved' ? 'approve' : 'suspend'} this veterinarian?`)) return;
+    
+    try {
+      // Update veterinarian availability
+      const { error: vetError } = await supabase
+        .from('veterinarians')
+        .update({ is_available: newStatus === 'approved' })
+        .eq('id', vetId);
+      
+      if (vetError) throw vetError;
+      
+      // Also update profile verification status if needed
+      const { data: vet } = await supabase
+        .from('veterinarians')
+        .select('user_id')
+        .eq('id', vetId)
+        .single();
+      
+      if (vet?.user_id) {
+        await supabase
+          .from('profiles')
+          .update({ verification_status: newStatus })
+          .eq('id', vet.user_id);
+      }
+      
+      alert(`Veterinarian ${newStatus === 'approved' ? 'approved' : 'suspended'} successfully!`);
+      fetchTabData('veterinarians');
+    } catch (error: any) {
+      console.error('Error updating veterinarian status:', error);
+      alert('Failed to update veterinarian status: ' + error.message);
+    }
+  };
+
   if (adminStats.loading) {
     return (
       <ProtectedRoute requiredRole="admin">
@@ -994,13 +1274,25 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button 
+                                onClick={() => handleViewUser(user.id)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="View User"
+                              >
                                 <EyeIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-green-600 hover:text-green-900">
+                              <button 
+                                onClick={() => handleEditUser(user.id)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit User"
+                              >
                                 <PencilIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-red-600 hover:text-red-900">
+                              <button 
+                                onClick={() => handleToggleUserStatus(user.id, !user.is_active)}
+                                className="text-red-600 hover:text-red-900"
+                                title={user.is_active ? "Deactivate User" : "Activate User"}
+                              >
                                 <TrashIcon className="w-4 h-4" />
                               </button>
                             </div>
@@ -1101,13 +1393,25 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button 
+                                onClick={() => handleViewClinic(clinic.id)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="View Clinic"
+                              >
                                 <EyeIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-green-600 hover:text-green-900">
+                              <button 
+                                onClick={() => handleEditClinic(clinic.id)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit Clinic"
+                              >
                                 <PencilIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-red-600 hover:text-red-900">
+                              <button 
+                                onClick={() => handleToggleClinicStatus(clinic.id, !clinic.is_active)}
+                                className="text-red-600 hover:text-red-900"
+                                title={clinic.is_active ? "Deactivate Clinic" : "Activate Clinic"}
+                              >
                                 <TrashIcon className="w-4 h-4" />
                               </button>
                             </div>
@@ -1201,7 +1505,11 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-blue-600 hover:text-blue-900">
+                            <button 
+                              onClick={() => handleViewAppointment(appointment.id)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Appointment Details"
+                            >
                               <EyeIcon className="w-4 h-4" />
                             </button>
                           </td>
@@ -1295,13 +1603,25 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button 
+                                onClick={() => handleViewVeterinarian(vet.id)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="View Veterinarian"
+                              >
                                 <EyeIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-green-600 hover:text-green-900">
+                              <button 
+                                onClick={() => handleEditVeterinarian(vet.id)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit Veterinarian"
+                              >
                                 <PencilIcon className="w-4 h-4" />
                               </button>
-                              <button className="text-red-600 hover:text-red-900">
+                              <button 
+                                onClick={() => handleToggleVeterinarianStatus(vet.id, vet.verification_status === 'approved' ? 'pending' : 'approved')}
+                                className="text-red-600 hover:text-red-900"
+                                title={vet.verification_status === 'approved' ? "Suspend Veterinarian" : "Approve Veterinarian"}
+                              >
                                 <TrashIcon className="w-4 h-4" />
                               </button>
                             </div>
@@ -1834,6 +2154,542 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+        
+        {/* User Details Modal */}
+        {showUserModal && selectedUser && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-600/90 via-blue-600/85 to-purple-600/90 backdrop-blur-lg" onClick={() => setShowUserModal(false)}></div>
+            
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-white/20">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+                      <UserIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">User Details</h3>
+                      <p className="text-blue-100 text-sm">{selectedUser.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowUserModal(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* User Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <UserIcon className="w-4 h-4 mr-2" />
+                    User Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Full Name:</span>
+                      <p className="font-medium">{selectedUser.full_name || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Email:</span>
+                      <p className="font-medium">{selectedUser.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Role:</span>
+                      <p className="font-medium capitalize">{selectedUser.user_role}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedUser.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Phone:</span>
+                      <p className="font-medium">{selectedUser.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Joined:</span>
+                      <p className="font-medium">{new Date(selectedUser.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Form */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Edit User</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.full_name || ''}
+                        onChange={(e) => setEditFormData({...editFormData, full_name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role
+                      </label>
+                      <select
+                        value={editFormData.user_role || ''}
+                        onChange={(e) => setEditFormData({...editFormData, user_role: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      >
+                        <option value="pet_owner">Pet Owner</option>
+                        <option value="veterinarian">Veterinarian</option>
+                        <option value="admin">Admin</option>
+                        <option value="receptionist">Receptionist</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleToggleUserStatus(selectedUser.id, !selectedUser.is_active)}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      selectedUser.is_active 
+                        ? 'bg-red-600 text-white hover:bg-red-700' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {selectedUser.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={handleEditUser}
+                    disabled={updating}
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {updating ? 'Updating...' : 'Update User'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Clinic Details Modal */}
+        {showClinicModal && selectedClinic && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/90 via-teal-600/85 to-cyan-600/90 backdrop-blur-lg" onClick={() => setShowClinicModal(false)}></div>
+            
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-white/20">
+              <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-6 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+                      <BuildingOfficeIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Clinic Details</h3>
+                      <p className="text-emerald-100 text-sm">{selectedClinic.name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowClinicModal(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Clinic Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <BuildingOfficeIcon className="w-4 h-4 mr-2" />
+                    Clinic Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Name:</span>
+                      <p className="font-medium">{selectedClinic.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedClinic.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedClinic.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-600">Address:</span>
+                      <p className="font-medium">{selectedClinic.address}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Phone:</span>
+                      <p className="font-medium">{selectedClinic.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Email:</span>
+                      <p className="font-medium">{selectedClinic.email || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Emergency Service:</span>
+                      <p className="font-medium">{selectedClinic.is_emergency_available ? 'Available' : 'Not Available'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Created:</span>
+                      <p className="font-medium">{new Date(selectedClinic.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Form */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Edit Clinic</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Clinic Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.name || ''}
+                        onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Phone
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.phone || ''}
+                          onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={editFormData.email || ''}
+                          onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleToggleClinicStatus(selectedClinic.id, !selectedClinic.is_active)}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      selectedClinic.is_active 
+                        ? 'bg-red-600 text-white hover:bg-red-700' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {selectedClinic.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={handleEditClinic}
+                    disabled={updating}
+                    className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                  >
+                    {updating ? 'Updating...' : 'Update Clinic'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Appointment Details Modal */}
+        {showAppointmentModal && selectedAppointment && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/90 via-indigo-600/85 to-blue-600/90 backdrop-blur-lg" onClick={() => setShowAppointmentModal(false)}></div>
+            
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-white/20">
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-6 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+                      <CalendarDaysIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Appointment Details</h3>
+                      <p className="text-purple-100 text-sm">
+                        {selectedAppointment.patients?.name} - {new Date(selectedAppointment.appointment_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAppointmentModal(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Pet Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <HeartIcon className="w-4 h-4 mr-2" />
+                    Pet Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Name:</span>
+                      <p className="font-medium">{selectedAppointment.patients?.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Species:</span>
+                      <p className="font-medium">{selectedAppointment.patients?.species}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Breed:</span>
+                      <p className="font-medium">{selectedAppointment.patients?.breed || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Owner Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <UserIcon className="w-4 h-4 mr-2" />
+                    Owner Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Name:</span>
+                      <p className="font-medium">{selectedAppointment.pet_owner_profiles?.full_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Phone:</span>
+                      <p className="font-medium">{selectedAppointment.pet_owner_profiles?.phone || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appointment Details */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <CalendarDaysIcon className="w-4 h-4 mr-2" />
+                    Appointment Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Date:</span>
+                      <p className="font-medium">{new Date(selectedAppointment.appointment_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Time:</span>
+                      <p className="font-medium">{selectedAppointment.appointment_time}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedAppointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        selectedAppointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                        selectedAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedAppointment.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Amount:</span>
+                      <p className="font-medium">₱{selectedAppointment.total_amount?.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Veterinarian:</span>
+                      <p className="font-medium">Dr. {selectedAppointment.veterinarians?.full_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Clinic:</span>
+                      <p className="font-medium">{selectedAppointment.clinics?.name}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visit Information */}
+                {selectedAppointment.reason_for_visit && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                      <DocumentTextIcon className="w-4 h-4 mr-2" />
+                      Visit Information
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <span className="text-gray-600 font-medium">Reason for Visit:</span>
+                        <p className="mt-1">{selectedAppointment.reason_for_visit}</p>
+                      </div>
+                      {selectedAppointment.symptoms && (
+                        <div>
+                          <span className="text-gray-600 font-medium">Symptoms:</span>
+                          <p className="mt-1">{selectedAppointment.symptoms}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Veterinarian Details Modal */}
+        {showVeterinarianModal && selectedVeterinarian && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-blue-600/85 to-teal-600/90 backdrop-blur-lg" onClick={() => setShowVeterinarianModal(false)}></div>
+            
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-white/20">
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-6 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+                      <UserIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Veterinarian Details</h3>
+                      <p className="text-indigo-100 text-sm">Dr. {selectedVeterinarian.full_name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowVeterinarianModal(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Veterinarian Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <AcademicCapIcon className="w-4 h-4 mr-2" />
+                    Professional Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Name:</span>
+                      <p className="font-medium">Dr. {selectedVeterinarian.full_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">License:</span>
+                      <p className="font-medium">{selectedVeterinarian.license_number}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Specialization:</span>
+                      <p className="font-medium">{selectedVeterinarian.specialization || 'General Practice'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Experience:</span>
+                      <p className="font-medium">{selectedVeterinarian.years_experience} years</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Consultation Fee:</span>
+                      <p className="font-medium">₱{selectedVeterinarian.consultation_fee}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Rating:</span>
+                      <p className="font-medium">⭐ {selectedVeterinarian.average_rating}/5.0</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Email:</span>
+                      <p className="font-medium">{selectedVeterinarian.profiles?.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedVeterinarian.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedVeterinarian.is_available ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Clinic Information */}
+                {selectedVeterinarian.clinics && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                      <BuildingOfficeIcon className="w-4 h-4 mr-2" />
+                      Clinic Information
+                    </h4>
+                    <div className="text-sm">
+                      <p className="font-medium">{selectedVeterinarian.clinics.name}</p>
+                      <p className="text-gray-600">{selectedVeterinarian.clinics.address}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Form */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Edit Veterinarian</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Specialization
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.specialization || ''}
+                        onChange={(e) => setEditFormData({...editFormData, specialization: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Consultation Fee (₱)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.consultation_fee || ''}
+                        onChange={(e) => setEditFormData({...editFormData, consultation_fee: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleToggleVeterinarianStatus(selectedVeterinarian.id, selectedVeterinarian.is_available ? 'pending' : 'approved')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      selectedVeterinarian.is_available 
+                        ? 'bg-red-600 text-white hover:bg-red-700' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {selectedVeterinarian.is_available ? 'Suspend' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={handleEditVeterinarian}
+                    disabled={updating}
+                    className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {updating ? 'Updating...' : 'Update Veterinarian'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );

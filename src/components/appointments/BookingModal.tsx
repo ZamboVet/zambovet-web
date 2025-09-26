@@ -117,6 +117,33 @@ export default function BookingModal({ isOpen, onClose, clinic, selectedVet }: B
     const today = new Date().toISOString().split('T')[0];
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 30); // Book up to 30 days in advance
+    
+    // Get current time for today's validation
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Function to check if a time slot is in the past for today's date
+    const isTimeSlotPast = (timeValue: string, selectedDate: string) => {
+        // Only check for today's date
+        if (selectedDate !== today) {
+            return false;
+        }
+        
+        const [hour, minute] = timeValue.split(':').map(Number);
+        
+        // If selected hour is less than current hour, it's in the past
+        if (hour < currentHour) {
+            return true;
+        }
+        
+        // If same hour but selected minute is less than current minute, it's in the past
+        if (hour === currentHour && minute <= currentMinute) {
+            return true;
+        }
+        
+        return false;
+    };
 
     useEffect(() => {
         if (isOpen && user) {
@@ -177,6 +204,12 @@ export default function BookingModal({ isOpen, onClose, clinic, selectedVet }: B
 
     const handleDateTimeSelection = () => {
         if (selectedDate && selectedTime) {
+            // Check if selected time is in the past
+            if (isTimeSlotPast(selectedTime, selectedDate)) {
+                alert('Selected time is in the past. Please choose a future time slot.');
+                setSelectedTime(''); // Clear the invalid time selection
+                return;
+            }
             setCurrentStep(4);
         }
     };
@@ -184,6 +217,12 @@ export default function BookingModal({ isOpen, onClose, clinic, selectedVet }: B
     const handleBooking = async () => {
         if (!selectedPet || !selectedVeterinarian || !selectedDate || !selectedTime) {
             alert('Please fill in all required fields');
+            return;
+        }
+        
+        // Final validation: Check if selected time is in the past
+        if (isTimeSlotPast(selectedTime, selectedDate)) {
+            alert('Cannot book appointment in the past. Please select a future time slot.');
             return;
         }
 
@@ -542,14 +581,27 @@ export default function BookingModal({ isOpen, onClose, clinic, selectedVet }: B
                                     value={selectedTime}
                                     onChange={(e) => setSelectedTime(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+                                    disabled={selectedDate === today && timeSlots.every(slot => isTimeSlotPast(slot.value, selectedDate))}
                                 >
-                                    <option value="">Select time</option>
-                                    {timeSlots.map((slot) => (
+                                    <option value="">
+                                        {selectedDate === today && timeSlots.every(slot => isTimeSlotPast(slot.value, selectedDate))
+                                            ? 'No available times remaining today'
+                                            : 'Select time'
+                                        }
+                                    </option>
+                                    {timeSlots
+                                        .filter(slot => !isTimeSlotPast(slot.value, selectedDate))
+                                        .map((slot) => (
                                         <option key={slot.value} value={slot.value}>
                                             {slot.display}
                                         </option>
                                     ))}
                                 </select>
+                                {selectedDate === today && timeSlots.every(slot => isTimeSlotPast(slot.value, selectedDate)) && (
+                                    <p className="mt-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
+                                        ⚠️ All appointment times for today have passed. Please select a future date.
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div className="mt-6 flex justify-between">

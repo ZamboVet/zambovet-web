@@ -66,6 +66,7 @@ import AppointmentDetailsModal from '@/components/appointments/AppointmentDetail
 import PetDiary from '@/components/diary/PetDiary';
 import DiaryEntryModal from '@/components/diary/DiaryEntryModal';
 import ReviewSubmissionModal from '@/components/reviews/ReviewSubmissionModal';
+import ImageCrop from '@/components/ui/ImageCrop';
 import {
   Line,
   AreaChart,
@@ -180,6 +181,9 @@ export default function PetOwnerDashboard() {
   const [selectedProfileImage, setSelectedProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageForCropping, setImageForCropping] = useState<string | null>(null);
+  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
   
   // TestModal state
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
@@ -718,12 +722,11 @@ export default function PetOwnerDashboard() {
         return;
       }
       
-      setSelectedProfileImage(file);
-      
-      // Create preview
+      // Create preview for cropping
       const reader = new FileReader();
       reader.onload = (e) => {
-        setProfileImagePreview(e.target?.result as string);
+        setImageForCropping(e.target?.result as string);
+        setShowCropModal(true);
       };
       reader.readAsDataURL(file);
     }
@@ -762,19 +765,18 @@ export default function PetOwnerDashboard() {
   };
 
   const uploadProfileImage = async (userId: string): Promise<string | null> => {
-    if (!selectedProfileImage) return null;
+    if (!croppedImageBlob) return null;
     
     setUploadingProfileImage(true);
     try {
-      const fileExt = selectedProfileImage.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const fileName = `${userId}-${Date.now()}.jpg`;
       const filePath = `profile-images/${fileName}`;
 
-      console.log('Attempting to upload profile image:', { filePath, bucket: 'profile-images' });
+      console.log('Attempting to upload cropped profile image:', { filePath, bucket: 'profile-images' });
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, selectedProfileImage);
+        .upload(filePath, croppedImageBlob);
 
       if (uploadError) {
         console.error('Error uploading profile image:', uploadError);
@@ -1214,9 +1216,9 @@ export default function PetOwnerDashboard() {
         throw new Error('Full name is required');
       }
 
-      // Upload profile image if selected
+      // Upload profile image if cropped
       let profileImageUrl = null;
-      if (selectedProfileImage) {
+      if (croppedImageBlob) {
         try {
           profileImageUrl = await uploadProfileImage(user?.id || '');
         } catch (uploadError: any) {
@@ -1250,6 +1252,8 @@ export default function PetOwnerDashboard() {
       // Reset image states
       setSelectedProfileImage(null);
       setProfileImagePreview(null);
+      setCroppedImageBlob(null);
+      setImageForCropping(null);
       
       // Show success message
       setActionSuccess({
@@ -1382,6 +1386,26 @@ export default function PetOwnerDashboard() {
     if (activeTab === 'appointments') {
       fetchTabData('appointments');
     }
+  };
+
+  const handleCropComplete = (croppedImageBlob: Blob) => {
+    setCroppedImageBlob(croppedImageBlob);
+    
+    // Create preview from cropped blob
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfileImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(croppedImageBlob);
+    
+    setShowCropModal(false);
+    setImageForCropping(null);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setImageForCropping(null);
+    setCroppedImageBlob(null);
   };
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
@@ -3602,12 +3626,14 @@ export default function PetOwnerDashboard() {
                           <span>Choose Photo</span>
                         </label>
                         
-                        {selectedProfileImage && (
+                        {(croppedImageBlob || profileImagePreview) && (
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedProfileImage(null);
                               setProfileImagePreview(null);
+                              setCroppedImageBlob(null);
+                              setImageForCropping(null);
                             }}
                             className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
                           >
@@ -3835,6 +3861,19 @@ export default function PetOwnerDashboard() {
               }}
               appointment={selectedAppointmentForReview}
               onReviewSubmitted={handleReviewSubmitted}
+            />
+          )}
+
+          {/* Image Crop Modal */}
+          {showCropModal && imageForCropping && (
+            <ImageCrop
+              src={imageForCropping}
+              onCropComplete={handleCropComplete}
+              onCancel={handleCropCancel}
+              aspect={1}
+              circularCrop={true}
+              minWidth={150}
+              minHeight={150}
             />
           )}
 
